@@ -33,29 +33,29 @@ LapX9C10X throttle(THROT_INC_PIN, THROT_UD_PIN, THROT_CS_PIN, THROT_RESISTANCE);
 void setup() {
   Serial.begin(9600);
   Serial.println("MOTOR INIT");
-  throttle.begin(-1);
+  throttle.begin(99); // Maximum resistance
   delay(5000);
 }
 
 void loop() {
   // Demo test loop
   int counter;
-  for(counter = 0;, counter < throttleMax; counter++) {
-    Serial.print("Inc: counter = ");
-    Serial.print(counter);
-    throttle.set(counter);
-    Serial.print(", new resistance = ");
-    Serial.print(throttle.getK());
-    Serial.println("KOhms");
-    delay(100)
-  }
-  for(counter = throttleMax - 1;, counter >= 0; counter--) {
+  for(counter = 99; counter >= 50; counter--) {
     Serial.print("Decc: counter = ");
     Serial.print(counter);
     throttle.set(counter);
     Serial.print(", new resistance = ");
     Serial.print(throttle.getK());
     Serial.println("KOhms");
-    delay(100)
+    delay(100);
+  }
+  for(counter = 50; counter < 99; counter++) {
+    Serial.print("Inc: counter = ");
+    Serial.print(counter);
+    throttle.set(counter);
+    Serial.print(", new resistance = ");
+    Serial.print(throttle.getK());
+    Serial.println("KOhms");
+    delay(100);
   }
 }
