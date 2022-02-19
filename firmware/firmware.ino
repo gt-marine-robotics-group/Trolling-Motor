@@ -40,8 +40,8 @@ void setup() {
 void loop() {
   // Demo test loop
   int counter;
-  for(counter = 99; counter >= 50; counter--) {
-    Serial.print("Decc: counter = ");
+  for(counter = 0; counter < throttleMax; counter++) {
+    Serial.print("Inc: counter = ");
     Serial.print(counter);
     throttle.set(counter);
     Serial.print(", new resistance = ");
@@ -49,8 +49,8 @@ void loop() {
     Serial.println("KOhms");
     delay(100);
   }
-  for(counter = 50; counter < 99; counter++) {
-    Serial.print("Inc: counter = ");
+  for(counter = throttleMax - 1; counter >= 0; counter--) {
+    Serial.print("Decc: counter = ");
     Serial.print(counter);
     throttle.set(counter);
     Serial.print(", new resistance = ");
