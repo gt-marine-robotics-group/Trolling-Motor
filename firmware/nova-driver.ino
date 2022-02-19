@@ -17,8 +17,8 @@
 
 // PINS -------------------------------------------------------------
 const int pot_cs = 5;
-const int pot_incr = 6;
-const int pot_ud = 7;
+const int pot_ud = 6;
+const int pot_inc = 7;
 
 // 
 
