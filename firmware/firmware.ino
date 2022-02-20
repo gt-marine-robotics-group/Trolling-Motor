@@ -15,7 +15,7 @@
    - Version 1: Arduino Nano RP2040 - micro-ROS
 
   Resources
-  
+  https://stackoverflow.com/questions/6504211/is-it-possible-to-include-a-library-from-another-library-using-the-arduino-ide
 */
 
 // PINS -------------------------------------------------------------
@@ -26,6 +26,8 @@ const int THROT_INC_PIN = 7;
 // VARS -------------------------------------------------------------
 const int THROT_RESISTANCE = LAPX9C10X_X9C104;
 const int throttleMax = 50;
+int direction = 0; // 0 - OFF | 1 - FWD | 2 - BWD
+
 
 // DEVICES ----------------------------------------------------------
 LapX9C10X throttle(THROT_INC_PIN, THROT_UD_PIN, THROT_CS_PIN, THROT_RESISTANCE);
@@ -49,6 +51,7 @@ void loop() {
     Serial.println("KOhms");
     delay(100);
   }
+
   for(counter = throttleMax - 1; counter >= 0; counter--) {
     Serial.print("Decc: counter = ");
     Serial.print(counter);
@@ -59,3 +62,5 @@ void loop() {
     delay(100);
   }
 }
+
+void 
