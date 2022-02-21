@@ -12,7 +12,7 @@
 
   Roadmap
    - Version 0: Arduino Nano - Serial Commuication
-   - Version 1: Arduino Nano RP2040 - micro-ROS
+   - Version 1: Raspberry Pi Pico - micro-ROS
 
   Resources
   https://stackoverflow.com/questions/6504211/is-it-possible-to-include-a-library-from-another-library-using-the-arduino-ide
@@ -41,26 +41,32 @@ void setup() {
 
 void loop() {
   // Demo test loop
-  int counter;
-  for(counter = 0; counter < throttleMax; counter++) {
-    Serial.print("Inc: counter = ");
-    Serial.print(counter);
-    throttle.set(counter);
-    Serial.print(", new resistance = ");
-    Serial.print(throttle.getK());
-    Serial.println("KOhms");
-    delay(100);
-  }
+  // int counter;
+  // for(counter = 0; counter < throttleMax; counter++) {
+  //   Serial.print("Inc: counter = ");
+  //   Serial.print(counter);
+  //   throttle.set(counter);
+  //   Serial.print(", new resistance = ");
+  //   Serial.print(throttle.getK());
+  //   Serial.println("KOhms");
+  //   delay(100);
+  // }
 
-  for(counter = throttleMax - 1; counter >= 0; counter--) {
-    Serial.print("Decc: counter = ");
-    Serial.print(counter);
-    throttle.set(counter);
-    Serial.print(", new resistance = ");
-    Serial.print(throttle.getK());
-    Serial.println("KOhms");
-    delay(100);
-  }
+  // for(counter = throttleMax - 1; counter >= 0; counter--) {
+  //   Serial.print("Decc: counter = ");
+  //   Serial.print(counter);
+  //   throttle.set(counter);
+  //   Serial.print(", new resistance = ");
+  //   Serial.print(throttle.getK());
+  //   Serial.println("KOhms");
+  //   delay(100);
+  // }
+
+  // Check signal for motor command
+
+  // Set motor to command value
+
+
 }
 
-void 
+
