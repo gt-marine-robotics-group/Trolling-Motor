@@ -41,26 +41,25 @@ void setup() {
 
 void loop() {
   // Demo test loop
-  // int counter;
-  // for(counter = 0; counter < throttleMax; counter++) {
-  //   Serial.print("Inc: counter = ");
-  //   Serial.print(counter);
-  //   throttle.set(counter);
-  //   Serial.print(", new resistance = ");
-  //   Serial.print(throttle.getK());
-  //   Serial.println("KOhms");
-  //   delay(100);
-  // }
-
-  // for(counter = throttleMax - 1; counter >= 0; counter--) {
-  //   Serial.print("Decc: counter = ");
-  //   Serial.print(counter);
-  //   throttle.set(counter);
-  //   Serial.print(", new resistance = ");
-  //   Serial.print(throttle.getK());
-  //   Serial.println("KOhms");
-  //   delay(100);
-  // }
+   int counter;
+   for(counter = 0; counter < throttleMax; counter++) {
+     Serial.print("Inc: counter = ");
+     Serial.print(counter);
+     throttle.set(counter);
+     Serial.print(", new resistance = ");
+     Serial.print(throttle.getK());
+     Serial.println("KOhms");
+     delay(100);
+   }
+   for(counter = throttleMax - 1; counter >= 0; counter--) {
+     Serial.print("Decc: counter = ");
+     Serial.print(counter);
+     throttle.set(counter);
+     Serial.print(", new resistance = ");
+     Serial.print(throttle.getK());
+     Serial.println("KOhms");
+     delay(100);
+   }
 
   // Check signal for motor command
 
@@ -68,5 +67,3 @@ void loop() {
 
 
 }
-
-
