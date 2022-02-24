@@ -34,9 +34,13 @@ LapX9C10X throttle(THROT_INC_PIN, THROT_UD_PIN, THROT_CS_PIN, THROT_RESISTANCE);
 
 void setup() {
   Serial.begin(9600);
-  Serial.println("MOTOR INIT");
+  Serial.println("NOVA MOTOR STARTING...");
   throttle.begin(-1); // Min resistance
   delay(5000);
+  
+  Serial.println("==================================================");
+  Serial.println("============ NOVA MOTOR INIT COMPLETE ============");
+  Serial.println("==================================================");
 }
 
 void loop() {
