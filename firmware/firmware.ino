@@ -66,8 +66,14 @@ void loop() {
    }
 
   // Check signal for motor command
-
+  int m_signal=0;
   // Set motor to command value
+  if m_signal<0{
+    throttle.set(abs(m_signal));
+  }
+  else{
+    throttle.set(m_signal);
+  }
 
 
 }
