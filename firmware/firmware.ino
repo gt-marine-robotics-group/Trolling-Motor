@@ -68,16 +68,16 @@ void loop() {
   // Check signal for motor command
   int m_signal=0;
   // Set motor to command value
-  if m_signal<0{
-    direction=2   //BWD
+  if (m_signal<0) {
+    direction=2;   //BWD
     throttle.set(abs(m_signal));
   }
-  else if m_signal=0{
-    direction=0   //OFF
-    throttle.set(0)
+  else if (m_signal==0) {
+    direction=0;   //OFF
+    throttle.set(0);
   }
-  else{
-    direction=1   //FWD
+  else {
+    direction=1;   //FWD
     throttle.set(m_signal);
   }
 
