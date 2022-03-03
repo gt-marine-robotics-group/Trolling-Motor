@@ -43,6 +43,21 @@ void setup() {
   Serial.println("==================================================");
 }
 
+void set_direction(int d) {
+  if (d==0){ //OFF
+    digitalWrite(13, LOW);
+    digitalWrite(12, LOW);
+  }
+  else if (d==1){ //FWD
+    digitalWrite(13, LOW);
+    digitalWrite(12, HIHG);
+  }
+  else if (d==1){ //BWD
+    digitalWrite(13, HIGH);
+    digitalWrite(12, LOW);
+  }
+}
+
 void loop() {
   // Demo test loop
    int counter;
@@ -70,14 +85,17 @@ void loop() {
   // Set motor to command value
   if (m_signal<0) {
     direction=2;   //BWD
+    set_direction(direction);
     throttle.set(abs(m_signal));
   }
   else if (m_signal==0) {
     direction=0;   //OFF
+    set_direction(direction);
     throttle.set(0);
   }
   else {
     direction=1;   //FWD
+    set_direction(direction);
     throttle.set(m_signal);
   }
 
