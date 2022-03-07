@@ -8,7 +8,7 @@
 
   v0.1
   modified 20 FEB 2022
-  by Sean Fish
+  by Sean Fish, Alvaro Pelaez
 
   Roadmap
    - Version 0: Arduino Nano - Serial Commuication
@@ -22,6 +22,8 @@
 const int THROT_CS_PIN = 5;
 const int THROT_UD_PIN = 6;
 const int THROT_INC_PIN = 7;
+const int DIR_SEL0_PIN = 2;
+const int DIR_SEL1_PIN = 3;
 
 // VARS -------------------------------------------------------------
 const int THROT_RESISTANCE = LAPX9C10X_X9C104;
@@ -37,7 +39,7 @@ void setup() {
   Serial.println("NOVA MOTOR STARTING...");
   throttle.begin(-1); // Min resistance
   delay(5000);
-  
+  int m_signal=0;
   Serial.println("==================================================");
   Serial.println("============ NOVA MOTOR INIT COMPLETE ============");
   Serial.println("==================================================");
@@ -45,59 +47,61 @@ void setup() {
 
 void set_direction(int d) {
   if (d==0){ //OFF
-    digitalWrite(13, LOW);
-    digitalWrite(12, LOW);
+    digitalWrite(DIR_SEL0_PIN, LOW);
+    digitalWrite(DIR_SEL1_PIN, LOW);
   }
   else if (d==1){ //FWD
-    digitalWrite(13, LOW);
-    digitalWrite(12, HIHG);
+    digitalWrite(DIR_SEL0_PIN, LOW);
+    digitalWrite(DIR_SEL1_PIN, HIGH);
   }
   else if (d==1){ //BWD
-    digitalWrite(13, HIGH);
-    digitalWrite(12, LOW);
+    digitalWrite(DIR_SEL0_PIN, HIGH);
+    digitalWrite(DIR_SEL1_PIN, LOW);
   }
 }
 
 void loop() {
   // Demo test loop
-   int counter;
-   for(counter = 0; counter < throttleMax; counter++) {
-     Serial.print("Inc: counter = ");
-     Serial.print(counter);
-     throttle.set(counter);
-     Serial.print(", new resistance = ");
-     Serial.print(throttle.getK());
-     Serial.println("KOhms");
-     delay(100);
-   }
-   for(counter = throttleMax - 1; counter >= 0; counter--) {
-     Serial.print("Decc: counter = ");
-     Serial.print(counter);
-     throttle.set(counter);
-     Serial.print(", new resistance = ");
-     Serial.print(throttle.getK());
-     Serial.println("KOhms");
-     delay(100);
-   }
+  int counter;
+
+  
+  for(counter = 0; counter < throttleMax; counter++) {
+    Serial.print("Inc: counter = ");
+    Serial.print(counter);
+    throttle.set(counter);
+    Serial.print(", new resistance = ");
+    Serial.print(throttle.getK());
+    Serial.println("KOhms");
+    delay(100);
+  }
+  for(counter = throttleMax - 1; counter >= 0; counter--) {
+    Serial.print("Decc: counter = ");
+    Serial.print(counter);
+    throttle.set(counter);
+    Serial.print(", new resistance = ");
+    Serial.print(throttle.getK());
+    Serial.println("KOhms");
+    delay(100);
+  }
 
   // Check signal for motor command
-  int m_signal=0;
+  
   // Set motor to command value
   if (m_signal<0) {
     direction=2;   //BWD
     set_direction(direction);
-    throttle.set(abs(m_signal));
+    #throttle.set(abs(m_signal));
   }
   else if (m_signal==0) {
     direction=0;   //OFF
     set_direction(direction);
-    throttle.set(0);
+    #throttle.set(0);
   }
   else {
     direction=1;   //FWD
     set_direction(direction);
-    throttle.set(m_signal);
+    #throttle.set(m_signal);
   }
-
+  m_signal = ((m_signal + 1 + 1) % 3) - 1;
 
 }
