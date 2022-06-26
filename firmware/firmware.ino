@@ -3,13 +3,13 @@
 //#include <micro_ros_arduino.h>
 
 /*
-  GITMRG Nova Custom Trolling Motor Driver
+  GITMRG Supernova V1.1 Custom Trolling Motor Driver
 
   Interfaces with PWM Module through digital potentiometer
   PWM Module is interfaced with NV-series 8-speed trolling motor.
 
-  v0.1
-  modified 20 FEB 2022
+  v1.0
+  modified 25 JUN 2022
   by Sean Fish, Alvaro Pelaez
 
   Roadmap
@@ -61,35 +61,43 @@ class Motor {
 
 // PINS -------------------------------------------------------------
 // RC INPUT
-const int ORX_AUX1_PIN = 1; // checks if killed - need to figure out reset check
-const int ORX_GEAR_PIN = 2; // Auto vs Manual
-const int ORX_RUDD_PIN = 3; // yaw
-const int ORX_ELEV_PIN = 4; // WAM-V translate forward / backward
-const int ORX_AILE_PIN = 5; // WAM-V translate left / right
-const int ORX_THRO_PIN = 6;
+const int ORX_AUX1_PIN = 43; // checks if killed - need to figure out reset check
+const int ORX_GEAR_PIN = 45; // Kill swithc
+const int ORX_RUDD_PIN = 47; // yaw
+const int ORX_ELEV_PIN = 49; // WAM-V translate forward / backward
+const int ORX_AILE_PIN = 51; // WAM-V translate left / right
+const int ORX_THRO_PIN = 53;
 
 // MOTOR ALFA
-const int A_THRO_CS_PIN = 22;
-const int A_THRO_UD_PIN = 23;
-const int A_THRO_INC_PIN = 24;
-const int A_DIR_SEL0_PIN = 26;
-const int A_DIR_SEL1_PIN = 27;
+const int A_THRO_CS_PIN = 23;
+const int A_THRO_UD_PIN = 25;
+const int A_THRO_INC_PIN = 27;
+const int A_DIR_SEL0_PIN = 29;
+const int A_DIR_SEL1_PIN = 31;
 // MOTOR BRAVO
-//const int B_THRO_CS_PIN = 28;
-//const int B_THRO_UD_PIN = 29;
-//const int B_THRO_INC_PIN = 30;
-//const int B_DIR_SEL0_PIN = 32;
-//const int B_DIR_SEL1_PIN = 33;
+//const int B_THRO_CS_PIN = 14;
+//const int B_THRO_UD_PIN = 15;
+//const int B_THRO_INC_PIN = 16;
+//const int B_DIR_SEL0_PIN = 17;
+//const int B_DIR_SEL1_PIN = 18;
 // MOTOR CHARLIE
-
+//const int C_THRO_CS_PIN = 7;
+//const int C_THRO_UD_PIN = 6;
+//const int C_THRO_INC_PIN = 5;
+//const int C_DIR_SEL0_PIN = 4;
+//const int C_DIR_SEL1_PIN = 3;
 // MOTOR DELTA
-
+//const int D_THRO_CS_PIN = 12;
+//const int D_THRO_UD_PIN = 11;
+//const int D_THRO_INC_PIN = 10;
+//const int D_DIR_SEL0_PIN = 9;
+//const int D_DIR_SEL1_PIN = 8;
 
 // LIGHT TOWER
-const int LT_RED_PIN;
-const int LT_YEL_PIN;
-const int LT_GRN_PIN;
-const int LT_BLU_PIN;
+//const int LT_RED_PIN;
+//const int LT_YEL_PIN;
+//const int LT_GRN_PIN;
+//const int LT_BLU_PIN;
 
 // VARS -------------------------------------------------------------
 const int THRO_RESISTANCE = LAPX9C10X_X9C104;
@@ -132,14 +140,14 @@ void loop() {
   //  set_direction(direction);
 
   for (counter = -1 * throttleMax; counter < throttleMax; counter++) {
-    Serial.print("Inc: counter = ");
-    Serial.print(counter);
+    Serial.println("Inc: counter = ");
+    Serial.println(counter);
     motor_a.setThrottle(counter);
     delay(100);
   }
   for (counter = throttleMax - 1; counter >= -1 * throttleMax; counter--) {
-    Serial.print("Decc: counter = ");
-    Serial.print(counter);
+    Serial.println("Decc: counter = ");
+    Serial.println(counter);
     motor_a.setThrottle(counter);
     delay(100);
   }
