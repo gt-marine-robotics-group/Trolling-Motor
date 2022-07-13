@@ -1,4 +1,5 @@
 #include <LapX9C10X.h>
+#include <ServoInput.h>
 
 //#include <micro_ros_arduino.h>
 
@@ -15,6 +16,7 @@
   Roadmap
    - Version 0: Arduino Nano - Serial Commuication
    - Version 1: Arduino Due - micro-ROS
+   - Version 2: Teensy 4.0 - micro-ROS
 
   Resources
   https://stackoverflow.com/questions/6504211/is-it-possible-to-include-a-library-from-another-library-using-the-arduino-ide
@@ -75,23 +77,23 @@ const int A_THRO_INC_PIN = 27;
 const int A_DIR_SEL0_PIN = 29;
 const int A_DIR_SEL1_PIN = 31;
 // MOTOR BRAVO
-//const int B_THRO_CS_PIN = 14;
-//const int B_THRO_UD_PIN = 15;
-//const int B_THRO_INC_PIN = 16;
-//const int B_DIR_SEL0_PIN = 17;
-//const int B_DIR_SEL1_PIN = 18;
+const int B_THRO_CS_PIN = 14;
+const int B_THRO_UD_PIN = 15;
+const int B_THRO_INC_PIN = 16;
+const int B_DIR_SEL0_PIN = 17;
+const int B_DIR_SEL1_PIN = 18;
 // MOTOR CHARLIE
 //const int C_THRO_CS_PIN = 7;
-//const int C_THRO_UD_PIN = 6;
-//const int C_THRO_INC_PIN = 5;
-//const int C_DIR_SEL0_PIN = 4;
-//const int C_DIR_SEL1_PIN = 3;
+const int C_THRO_UD_PIN = 6;
+const int C_THRO_INC_PIN = 5;
+const int C_DIR_SEL0_PIN = 4;
+const int C_DIR_SEL1_PIN = 3;
 // MOTOR DELTA
-//const int D_THRO_CS_PIN = 12;
-//const int D_THRO_UD_PIN = 11;
-//const int D_THRO_INC_PIN = 10;
-//const int D_DIR_SEL0_PIN = 9;
-//const int D_DIR_SEL1_PIN = 8;
+const int D_THRO_CS_PIN = 12;
+const int D_THRO_UD_PIN = 11;
+const int D_THRO_INC_PIN = 10;
+const int D_DIR_SEL0_PIN = 9;
+const int D_DIR_SEL1_PIN = 8;
 
 // LIGHT TOWER
 //const int LT_RED_PIN;
@@ -111,6 +113,19 @@ int control_state = 1; // 0 - KILLED | 1 - STANDBY | 2 - MANUAL | 3 - AUTONOMOUS
 // DEVICES ----------------------------------------------------------
 // MOTOR ALFA
 Motor motor_a(A_THRO_INC_PIN, A_THRO_UD_PIN, A_THRO_CS_PIN, THRO_RESISTANCE, A_DIR_SEL0_PIN, A_DIR_SEL1_PIN);
+Motor motor_b(B_THRO_INC_PIN, B_THRO_UD_PIN, B_THRO_CS_PIN, THRO_RESISTANCE, B_DIR_SEL0_PIN, B_DIR_SEL1_PIN);
+Motor motor_c(C_THRO_INC_PIN, C_THRO_UD_PIN, C_THRO_CS_PIN, THRO_RESISTANCE, C_DIR_SEL0_PIN, C_DIR_SEL1_PIN);
+Motor motor_d(D_THRO_INC_PIN, D_THRO_UD_PIN, D_THRO_CS_PIN, THRO_RESISTANCE, D_DIR_SEL0_PIN, D_DIR_SEL1_PIN);
+
+
+ServoInputPin<ORX_AUX1_PIN> orxAux1; // 3 states
+ServoInputPin<ORX_GEAR_PIN> orxGear; // 2 states
+ServoInputPin<ORX_RUDD_PIN> orxRudd; // Continuous
+ServoInputPin<ORX_ELEV_PIN> orxElev; // Continuous
+ServoInputPin<ORX_AILE_PIN> orxAile; // Continuous
+ServoInputPin<ORX_THRO_PIN> orxThro; // Continuous
+
+
 
 // FUNCTIONS --------------------------------------------------------
 void subscription_callback(const void * msgin) {
