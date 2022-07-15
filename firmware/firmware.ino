@@ -96,10 +96,10 @@ const int D_DIR_SEL0_PIN = 9;
 const int D_DIR_SEL1_PIN = 8;
 
 // LIGHT TOWER
-//const int LT_RED_PIN;
-//const int LT_YEL_PIN;
-//const int LT_GRN_PIN;
-//const int LT_BLU_PIN;
+const int LT_RED_PIN = 85;
+const int LT_YEL_PIN = 84;
+const int LT_GRN_PIN = 83;
+const int LT_BLU_PIN = 82;
 
 // VARS -------------------------------------------------------------
 const int THRO_RESISTANCE = LAPX9C10X_X9C104;
@@ -111,13 +111,13 @@ int control_state = 1; // 0 - KILLED | 1 - STANDBY | 2 - MANUAL | 3 - AUTONOMOUS
 
 
 // DEVICES ----------------------------------------------------------
-// MOTOR ALFA
+// MOTORS
 Motor motor_a(A_THRO_INC_PIN, A_THRO_UD_PIN, A_THRO_CS_PIN, THRO_RESISTANCE, A_DIR_SEL0_PIN, A_DIR_SEL1_PIN);
 Motor motor_b(B_THRO_INC_PIN, B_THRO_UD_PIN, B_THRO_CS_PIN, THRO_RESISTANCE, B_DIR_SEL0_PIN, B_DIR_SEL1_PIN);
 Motor motor_c(C_THRO_INC_PIN, C_THRO_UD_PIN, C_THRO_CS_PIN, THRO_RESISTANCE, C_DIR_SEL0_PIN, C_DIR_SEL1_PIN);
 Motor motor_d(D_THRO_INC_PIN, D_THRO_UD_PIN, D_THRO_CS_PIN, THRO_RESISTANCE, D_DIR_SEL0_PIN, D_DIR_SEL1_PIN);
 
-
+// RC INPUTS
 ServoInputPin<ORX_AUX1_PIN> orxAux1; // 3 states
 ServoInputPin<ORX_GEAR_PIN> orxGear; // 2 states
 ServoInputPin<ORX_RUDD_PIN> orxRudd; // Continuous
@@ -132,8 +132,18 @@ void subscription_callback(const void * msgin) {
   Serial.println("CALLBACK");
 }
 
-// Need function for translating RC to motor
+// Calibrate controller function
+
+// Check current RC status (in order to minimize time polling)
+
+// Translate RC input to 4x holonomic motor system
+
+// Translate RC input to 2 motor system
+
 // Need publish vehicle state
+
+
+
 
 void setup() {
   Serial.begin(9600);
