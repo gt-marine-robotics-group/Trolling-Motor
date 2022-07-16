@@ -24,8 +24,8 @@
 
 class Motor {
   private:
-    int dirOnePin;
-    int dirTwoPin;
+    int dirOnePin; // BWD
+    int dirTwoPin; //FWD
     LapX9C10X *throttle;
 
     void setDirection(int d) {
@@ -59,12 +59,21 @@ class Motor {
       throttle->set(abs(throttleValue));
       return true;
     }
+
+    /*
+    bool addThrottle(int throttleValue) {
+      int num = (throttleValue + throttle->get(throttleValue)) % 100;
+      setDirection(num);
+      throttle->set(abs(num));
+      return truel
+    }
+    */
 };
 
 // PINS -------------------------------------------------------------
 // RC INPUT
 const int ORX_AUX1_PIN = 43; // checks if killed - need to figure out reset check
-const int ORX_GEAR_PIN = 45; // Kill swithc
+const int ORX_GEAR_PIN = 45; // Kill switch
 const int ORX_RUDD_PIN = 47; // yaw
 const int ORX_ELEV_PIN = 49; // WAM-V translate forward / backward
 const int ORX_AILE_PIN = 51; // WAM-V translate left / right
@@ -83,7 +92,7 @@ const int B_THRO_INC_PIN = 16;
 const int B_DIR_SEL0_PIN = 17;
 const int B_DIR_SEL1_PIN = 18;
 // MOTOR CHARLIE
-//const int C_THRO_CS_PIN = 7;
+const int C_THRO_CS_PIN = 7; //Previously Commented
 const int C_THRO_UD_PIN = 6;
 const int C_THRO_INC_PIN = 5;
 const int C_DIR_SEL0_PIN = 4;
@@ -157,6 +166,21 @@ void setup() {
   Serial.println("==================================================");
 }
 
+/*
+  From orcs-comms/firmware/firmware.ino
+*/
+
+int vehicleState;
+bool killed;
+int state;
+int xTranslation;
+int yTranslation;
+int yaw;
+
+/*
+  From orcs-comms/firmware/firmware.ino 
+*/
+
 
 void loop() {
   // Demo test loop
@@ -164,6 +188,16 @@ void loop() {
   //  direction=2;   //BWD
   //  set_direction(direction);
 
+  //From orcs-comms/firmware/firmware.ino
+  killed = orxGear.getBoolean();
+  state = orxAux1.map(0, 3);
+  xTranslation = orxElev.map(-100, 100);
+  yTranslation = orxAile.map(-100, 100);
+  yaw = orxRudd.map(-100, 100);
+  //From orcs-comms/firmware/firmware.ino
+
+
+/*
   for (counter = -1 * throttleMax; counter < throttleMax; counter++) {
     Serial.println("Inc: counter = ");
     Serial.println(counter);
@@ -176,4 +210,80 @@ void loop() {
     motor_a.setThrottle(counter);
     delay(100);
   }
-}
+*/
+
+  if (xTranslation > 0) {
+
+     motor_a.setThrottle(100);
+     motor_b.setThrottle(100);
+     motor_c.setThrottle(100);
+     motor_d.setThrottle(100);
+     Serial.println("Forward Surge");
+  } // Forward Surge
+
+
+  
+  if (xTranslation < 0) {
+
+     motor_a.setThrottle(-100);
+     motor_b.setThrottle(-100);
+     motor_c.setThrottle(-100);
+     motor_d.setThrottle(-100);
+     Serial.println("Backward Surge");
+  } //Backward Surge
+
+
+  
+  if (yTranslation > 0) {
+
+     motor_a.setThrottle(-100);
+     motor_b.setThrottle(-100);
+     motor_c.setThrottle(100);
+     motor_d.setThrottle(100);
+     Serial.println("Forward Sway");
+  } //Forward Sway
+
+
+
+  
+  if (yTranslation < 0) {
+
+     motor_a.setThrottle(100);
+     motor_b.setThrottle(100);
+     motor_c.setThrottle(-100);
+     motor_d.setThrottle(-100);
+     Serial.println("Backward Sway");
+  } //Backward Sway
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+} //Loop
