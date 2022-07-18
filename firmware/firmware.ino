@@ -1,4 +1,4 @@
-#include <LapX9C10X.h>
+#include <X9C10X.h>
 #include <ServoInput.h>
 
 //#include <micro_ros_arduino.h>
@@ -27,7 +27,11 @@ class Motor {
   private:
     int dirOnePin; // BWD
     int dirTwoPin; //FWD
-    LapX9C10X *throttle;
+    int throUdPin;
+    int throIncPin;
+    int throCsPin;
+    
+    X9C10X *throttle;
 
     void setDirection(int d) {
       if (d == 0) { //OFF
@@ -47,17 +51,20 @@ class Motor {
     Motor(uint8_t throIncPin, uint8_t throUdPin, uint8_t throCsPin, float throRes, int dirOnePin, int dirTwoPin) {
       this->dirOnePin = dirOnePin;
       this->dirTwoPin = dirTwoPin;
-      throttle = new LapX9C10X(throIncPin, throUdPin, throCsPin, throRes);
+      this->throUdPin = throUdPin;
+      this->throIncPin = throIncPin;
+      this->throCsPin = throCsPin;
+      throttle = new X9C104(throRes);
       init();
     }
     void init() {
-      throttle->begin(-1); // Min resistance
+      throttle->begin(this->throIncPin, this->throUdPin, this->throCsPin); // Min resistance
       pinMode(dirOnePin, OUTPUT);
       pinMode(dirTwoPin, OUTPUT);
     }
     bool setThrottle(int throttleValue) {
       setDirection(throttleValue);
-      throttle->set(abs(throttleValue));
+      throttle->setPosition(abs(throttleValue));
       return true;
     }
 
@@ -81,29 +88,30 @@ const int ORX_AILE_PIN = 51; // WAM-V translate left / right
 const int ORX_THRO_PIN = 53;
 
 // MOTOR ALFA
-const int A_THRO_CS_PIN = 23;
-const int A_THRO_UD_PIN = 25;
-const int A_THRO_INC_PIN = 27;
-const int A_DIR_SEL0_PIN = 29;
-const int A_DIR_SEL1_PIN = 31;
+const int A_THRO_CS_PIN = 12;
+const int A_THRO_UD_PIN = 11;
+const int A_THRO_INC_PIN = 10;
+const int A_DIR_SEL0_PIN = 9;
+const int A_DIR_SEL1_PIN = 8;
 // MOTOR BRAVO
-const int B_THRO_CS_PIN = 14;
-const int B_THRO_UD_PIN = 15;
-const int B_THRO_INC_PIN = 16;
-const int B_DIR_SEL0_PIN = 17;
-const int B_DIR_SEL1_PIN = 18;
+const int B_THRO_CS_PIN = 7; 
+const int B_THRO_UD_PIN = 6;
+const int B_THRO_INC_PIN = 5;
+const int B_DIR_SEL0_PIN = 4;
+const int B_DIR_SEL1_PIN = 3;
 // MOTOR CHARLIE
-const int C_THRO_CS_PIN = 7; //Previously Commented
-const int C_THRO_UD_PIN = 6;
-const int C_THRO_INC_PIN = 5;
-const int C_DIR_SEL0_PIN = 4;
-const int C_DIR_SEL1_PIN = 3;
+const int C_THRO_CS_PIN = 14;
+const int C_THRO_UD_PIN = 15;
+const int C_THRO_INC_PIN = 16;
+const int C_DIR_SEL0_PIN = 17;
+const int C_DIR_SEL1_PIN = 18;
 // MOTOR DELTA
-const int D_THRO_CS_PIN = 12;
-const int D_THRO_UD_PIN = 11;
-const int D_THRO_INC_PIN = 10;
-const int D_DIR_SEL0_PIN = 9;
-const int D_DIR_SEL1_PIN = 8;
+const int D_THRO_CS_PIN = 23;
+const int D_THRO_UD_PIN = 25;
+const int D_THRO_INC_PIN = 27;
+const int D_DIR_SEL0_PIN = 29;
+const int D_DIR_SEL1_PIN = 31;
+
 
 // LIGHT TOWER
 const int LT_RED_PIN = A4;
@@ -112,7 +120,8 @@ const int LT_YEL_PIN = A5;
 const int LT_BLU_PIN = A6;
 
 // VARS -------------------------------------------------------------
-const int THRO_RESISTANCE = LAPX9C10X_X9C104;
+//const int THRO_RESISTANCE = LAPX9C10X_X9C104;
+const int THRO_RESISTANCE = 100;
 const int throttleMax = 50;
 int m_signal = 0;
 bool debug = true;
@@ -122,13 +131,13 @@ int control_state = 1; // 0 - KILLED | 1 - STANDBY | 2 - MANUAL | 3 - AUTONOMOUS
 
 // DEVICES ----------------------------------------------------------
 // MOTORS
-//Motor motor_a(A_THRO_INC_PIN, A_THRO_UD_PIN, A_THRO_CS_PIN, THRO_RESISTANCE, A_DIR_SEL0_PIN, A_DIR_SEL1_PIN);
-//Motor motor_b(B_THRO_INC_PIN, B_THRO_UD_PIN, B_THRO_CS_PIN, THRO_RESISTANCE, B_DIR_SEL0_PIN, B_DIR_SEL1_PIN);
-//Motor motor_c(C_THRO_INC_PIN, C_THRO_UD_PIN, C_THRO_CS_PIN, THRO_RESISTANCE, C_DIR_SEL0_PIN, C_DIR_SEL1_PIN);
-//Motor motor_d(D_THRO_INC_PIN, D_THRO_UD_PIN, D_THRO_CS_PIN, THRO_RESISTANCE, D_DIR_SEL0_PIN, D_DIR_SEL1_PIN);
+Motor motor_a(A_THRO_INC_PIN, A_THRO_UD_PIN, A_THRO_CS_PIN, THRO_RESISTANCE, A_DIR_SEL0_PIN, A_DIR_SEL1_PIN);
+Motor motor_b(B_THRO_INC_PIN, B_THRO_UD_PIN, B_THRO_CS_PIN, THRO_RESISTANCE, B_DIR_SEL0_PIN, B_DIR_SEL1_PIN);
+Motor motor_c(C_THRO_INC_PIN, C_THRO_UD_PIN, C_THRO_CS_PIN, THRO_RESISTANCE, C_DIR_SEL0_PIN, C_DIR_SEL1_PIN);
+Motor motor_d(D_THRO_INC_PIN, D_THRO_UD_PIN, D_THRO_CS_PIN, THRO_RESISTANCE, D_DIR_SEL0_PIN, D_DIR_SEL1_PIN);
 
 // RC INPUTS
-ServoInputPin<ORX_AUX1_PIN> orxAux1; // 3 states
+ServoInputPin<ORX_AUX1_PIN> orxAux1; // 3 states - Manual / Paused / Autonomous
 ServoInputPin<ORX_GEAR_PIN> orxGear; // 2 states
 ServoInputPin<ORX_RUDD_PIN> orxRudd; // Continuous
 ServoInputPin<ORX_ELEV_PIN> orxElev; // Continuous
@@ -243,55 +252,18 @@ void loop() {
     digitalWrite(LT_GRN_PIN, LOW);
     digitalWrite(LT_BLU_PIN, HIGH);
   }
-//  delay(200);
-//  if (1) {
-//    Serial.println("R...");
-//    digitalWrite(LT_RED_PIN, HIGH);
-//    digitalWrite(LT_YEL_PIN, LOW);
-//    digitalWrite(LT_GRN_PIN, LOW);
-//    digitalWrite(LT_BLU_PIN, LOW);
-//    
-//  } //If
-//  delay(200);
-//  
-//  if(1) {
-//    Serial.println("Y...");
-//    digitalWrite(LT_RED_PIN, LOW);
-//    digitalWrite(LT_YEL_PIN, HIGH);
-//    digitalWrite(LT_GRN_PIN, LOW);
-//    digitalWrite(LT_BLU_PIN, LOW);
-//    
-//  } //If
-//  delay(200);
-//  
-//  //if (something == LT_YEL_PIN) {
-//  if (1) {
-//    Serial.println("G...");
-//    digitalWrite(LT_RED_PIN, LOW);
-//    digitalWrite(LT_YEL_PIN, LOW);
-//    digitalWrite(LT_GRN_PIN, HIGH);
-//    digitalWrite(LT_BLU_PIN, LOW);
-//    
-//  } //If
-//  delay(200);
-//  
-//  //if (something == LT_BLU_PIN) {
-//  if (1) {
-//    Serial.println("B...");
-//    digitalWrite(LT_RED_PIN, LOW);
-//    digitalWrite(LT_YEL_PIN, LOW);
-//    digitalWrite(LT_GRN_PIN, LOW);
-//    digitalWrite(LT_BLU_PIN, HIGH);
-//    
-//  } //If
+
+  motor_a.setThrottle(50);
+  delay(3000);
+  motor_a.setThrottle(0);
+  delay(1000);
+  motor_a.setThrottle(-50);
+  delay(3000);
+  motor_a.setThrottle(0);
+  delay(1000);
 }
 /*
-  for (counter = -1 * throttleMax; counter < throttleMax; counter++) {
-    Serial.println("Inc: counter = ");
-    Serial.println(counter);
-    motor_a.setThrottle(counter);
-    delay(100);
-  }
+
   for (counter = throttleMax - 1; counter >= -1 * throttleMax; counter--) {
     Serial.println("Decc: counter = ");
     Serial.println(counter);
