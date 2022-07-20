@@ -1,4 +1,4 @@
-#include <X9C10X.h>
+#include <LapX9C10X.h>
 #include <ServoInput.h>
 
 //#include <micro_ros_arduino.h>
@@ -30,8 +30,8 @@ class Motor {
     int throUdPin;
     int throIncPin;
     int throCsPin;
-    
-    X9C10X *throttle;
+
+    LapX9C10X *throttle;
 
     void setDirection(int d) {
       if (d == 0) { //OFF
@@ -46,7 +46,7 @@ class Motor {
         digitalWrite(dirOnePin, HIGH);
         digitalWrite(dirTwoPin, LOW);
       }
-    }   
+    }
   public:
     Motor(uint8_t throIncPin, uint8_t throUdPin, uint8_t throCsPin, float throRes, int dirOnePin, int dirTwoPin) {
       this->dirOnePin = dirOnePin;
@@ -54,27 +54,26 @@ class Motor {
       this->throUdPin = throUdPin;
       this->throIncPin = throIncPin;
       this->throCsPin = throCsPin;
-      throttle = new X9C104(throRes);
-      init();
+      throttle = new LapX9C10X(throIncPin, throUdPin, throCsPin, throRes);
     }
     void init() {
-      throttle->begin(this->throIncPin, this->throUdPin, this->throCsPin); // Min resistance
+      throttle->begin(); // Min resistance
       pinMode(dirOnePin, OUTPUT);
       pinMode(dirTwoPin, OUTPUT);
     }
     bool setThrottle(int throttleValue) {
       setDirection(throttleValue);
-      throttle->setPosition(abs(throttleValue));
+      throttle->reset(abs(throttleValue));
       return true;
     }
 
     /*
-    bool addThrottle(int throttleValue) {
+      bool addThrottle(int throttleValue) {
       int num = (throttleValue + throttle->get(throttleValue)) % 100;
       setDirection(num);
       throttle->set(abs(num));
       return truel
-    }
+      }
     */
 };
 
@@ -94,7 +93,7 @@ const int A_THRO_INC_PIN = 10;
 const int A_DIR_SEL0_PIN = 9;
 const int A_DIR_SEL1_PIN = 8;
 // MOTOR BRAVO
-const int B_THRO_CS_PIN = 7; 
+const int B_THRO_CS_PIN = 7;
 const int B_THRO_UD_PIN = 6;
 const int B_THRO_INC_PIN = 5;
 const int B_DIR_SEL0_PIN = 4;
@@ -120,8 +119,8 @@ const int LT_YEL_PIN = A5;
 const int LT_BLU_PIN = A6;
 
 // VARS -------------------------------------------------------------
-//const int THRO_RESISTANCE = LAPX9C10X_X9C104;
-const int THRO_RESISTANCE = 100;
+const int THRO_RESISTANCE = LAPX9C10X_X9C104;
+//const int THRO_RESISTANCE = 100;
 const int throttleMax = 50;
 int m_signal = 0;
 bool debug = true;
@@ -172,7 +171,7 @@ void setup() {
   Serial.begin(9600);
   delay(100);
   Serial.println("NOVA MOTOR STARTING...");
-  
+
   delay(500);
   Serial.println("R...");
   delay(500);
@@ -184,6 +183,10 @@ void setup() {
   Serial.println("B...");
   pinMode(LT_BLU_PIN, OUTPUT);
 
+  motor_a.init();
+  motor_b.init();
+  motor_c.init();
+  motor_d.init();
 
   Serial.println("==================================================");
   Serial.println("============ NOVA MOTOR INIT COMPLETE ============");
@@ -205,7 +208,7 @@ int yTranslation;
 int yaw;
 
 /*
-  From orcs-comms/firmware/firmware.ino 
+  From orcs-comms/firmware/firmware.ino
 */
 
 
@@ -219,15 +222,15 @@ void loop() {
   // Polling R/C commands
   // TODO: Make this use an interrupt callback that ensures that control state is switched immediately
   //From orcs-comms/firmware/firmware.ino
-//  killed = orxGear.getBoolean();
+  //  killed = orxGear.getBoolean();
   state = orxAux1.map(0, 3);
   Serial.println(state);
-//  xTranslation = orxElev.map(-100, 100);
-//  yTranslation = orxAile.map(-100, 100);
-//  yaw = orxRudd.map(-100, 100);
+  //  xTranslation = orxElev.map(-100, 100);
+  //  yTranslation = orxAile.map(-100, 100);
+  //  yaw = orxRudd.map(-100, 100);
   //From orcs-comms/firmware/firmware.ino
 
-  if (state == 2){
+  if (state == 2) {
     Serial.println("RC");
     digitalWrite(LT_RED_PIN, LOW);
     digitalWrite(LT_YEL_PIN, HIGH);
@@ -253,14 +256,34 @@ void loop() {
     digitalWrite(LT_BLU_PIN, HIGH);
   }
 
+
   motor_a.setThrottle(50);
-  delay(3000);
+  motor_b.setThrottle(50);
+  motor_c.setThrottle(50);
+  motor_d.setThrottle(50);
+
+  delay(4000);
+
   motor_a.setThrottle(0);
-  delay(1000);
+  motor_b.setThrottle(0);
+  motor_c.setThrottle(0);
+  motor_d.setThrottle(0);
+
+  delay(4000);
+
   motor_a.setThrottle(-50);
-  delay(3000);
+  motor_b.setThrottle(-50);
+  motor_c.setThrottle(-50);
+  motor_d.setThrottle(-50);
+
+  delay(4000);
+
   motor_a.setThrottle(0);
-  delay(1000);
+  motor_b.setThrottle(0);
+  motor_c.setThrottle(0);
+  motor_d.setThrottle(0);
+
+  delay(4000);
 }
 /*
 
@@ -282,7 +305,7 @@ void loop() {
 //  } // Forward Surge
 //
 //
-//  
+//
 //  if (xTranslation < 0) {
 //
 //     motor_a.setThrottle(-100);
@@ -293,7 +316,7 @@ void loop() {
 //  } //Backward Surge
 //
 //
-//  
+//
 //  if (yTranslation > 0) {
 //
 //     motor_a.setThrottle(-100);
@@ -305,7 +328,7 @@ void loop() {
 //
 //
 //
-//  
+//
 //  if (yTranslation < 0) {
 //
 //     motor_a.setThrottle(100);
@@ -317,7 +340,6 @@ void loop() {
 
 
 
-  
 
 
 
@@ -344,6 +366,7 @@ void loop() {
 
 
 
-  
-  
- //Loop
+
+
+
+//Loop
