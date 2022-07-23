@@ -120,7 +120,6 @@ const int LT_BLU_PIN = A6;
 
 // VARS -------------------------------------------------------------
 const int THRO_RESISTANCE = LAPX9C10X_X9C104;
-//const int THRO_RESISTANCE = 100;
 const int throttleMax = 50;
 int m_signal = 0;
 bool debug = true;
@@ -152,8 +151,14 @@ void subscription_callback(const void * msgin) {
 }
 
 // Calibrate controller function
+void calibrate_controller() {
+  continue();
+}
 
 // Check current RC status (in order to minimize time polling)
+void read_controller() {
+  continue();
+}
 
 // Translate RC input to 4x holonomic motor system
 
