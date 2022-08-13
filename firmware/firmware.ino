@@ -66,15 +66,6 @@ class Motor {
       throttle->reset(abs(throttleValue));
       return true;
     }
-
-    /*
-      bool addThrottle(int throttleValue) {
-      int num = (throttleValue + throttle->get(throttleValue)) % 100;
-      setDirection(num);
-      throttle->set(abs(num));
-      return truel
-      }
-    */
 };
 
 // PINS -------------------------------------------------------------
@@ -110,7 +101,6 @@ const int D_THRO_UD_PIN = 25;
 const int D_THRO_INC_PIN = 27;
 const int D_DIR_SEL0_PIN = 29;
 const int D_DIR_SEL1_PIN = 31;
-
 
 // LIGHT TOWER
 const int LT_RED_PIN = A4;
@@ -158,7 +148,6 @@ void subscription_callback(const void * msgin) {
   Serial.println("CALLBACK");
 }
 
-
 // Check current RC status (in order to minimize time polling)
 void read_rc() {
   cmd_srg = orxElev.mapDeadzone(-100, 101, 0.05);
@@ -182,17 +171,19 @@ void set_motor_4x() {
   cmd_d = d / max_val;
 }
 
-
 // Translate RC input to 2 motor system
-
-// Need publish vehicle state
+void set_motor_2x() {
+  int a = (cmd_srg - cmd_yaw);
+  int b = (cmd_srg + cmd_yaw);
+  float max_val = max(100, max(abs(a), abs(b))) / 100;
+  cmd_a = a / max_val;
+  cmd_b = b / max_val;
+}
 
 void set_light_tower(int r, int y, int g, int b) {
   // -1 = off | 0 = on | else frequency in hz
   Serial.println("ToDo");
 }
-
-
 
 template<uint8_t bs>
 bool calibrate_pin(ServoInputPin<bs> &input_pin) {
@@ -276,6 +267,13 @@ void set_lt(bool r, bool y, bool g, bool b) {
   digitalWrite(LT_BLU_PIN, b);
 }
 
+int vehicleState;
+bool killed;
+int state;
+int xTranslation;
+int yTranslation;
+int yaw;
+
 void setup() {
   Serial.begin(9600);
   delay(100);
@@ -304,9 +302,7 @@ void setup() {
     }
   }
 
-
   delay(500);
-  
   
   Serial.println("INITIALIZING MOTOR CONTROLLERS...");
   motor_a.init();
@@ -319,185 +315,11 @@ void setup() {
   Serial.println("==================================================");
 }
 
-/*
-  From orcs-comms/firmware/firmware.ino
-*/
-
-int vehicleState;
-bool killed;
-int state;
-int xTranslation;
-int yTranslation;
-int yaw;
-
-/*
-  From orcs-comms/firmware/firmware.ino
-*/
-
-
-
-
-
-
 
 void loop() {
-  // Demo test loop
-  
   // Polling R/C commands
-  // TODO: Make this use an interrupt callback that ensures that control state is switched immediately
   read_rc();
+  // Execute based on mode
   exec_mode(cmd_ctr);
-  
-
-//  Serial.print(cmd_srg);
-//  Serial.print(", ");
-//  Serial.print(cmd_swy);
-//  Serial.print(", ");
-//  Serial.print(cmd_yaw);
-//  Serial.print(", ");
-//  Serial.println(cmd_ctr);
-  //  xTranslation = orxElev.map(-100, 100);
-  //  yTranslation = orxAile.map(-100, 100);
-  //  yaw = orxRudd.map(-100, 100);
-  //From orcs-comms/firmware/firmware.ino
-
-//  if (state == 2) {
-//    Serial.println("RC");
-//    digitalWrite(LT_RED_PIN, LOW);
-//    digitalWrite(LT_YEL_PIN, HIGH);
-//    digitalWrite(LT_GRN_PIN, LOW);
-//    digitalWrite(LT_BLU_PIN, LOW);
-//  } else if (state == 1) {
-//    Serial.println("PAUSE");
-//    digitalWrite(LT_RED_PIN, HIGH);
-//    digitalWrite(LT_YEL_PIN, LOW);
-//    digitalWrite(LT_GRN_PIN, LOW);
-//    digitalWrite(LT_BLU_PIN, LOW);
-//  } else if (state == 0) {
-//    Serial.println("AUTO");
-//    digitalWrite(LT_RED_PIN, LOW);
-//    digitalWrite(LT_YEL_PIN, LOW);
-//    digitalWrite(LT_GRN_PIN, HIGH);
-//    digitalWrite(LT_BLU_PIN, LOW);
-//  } else {
-//    Serial.println("AUX");
-//    digitalWrite(LT_RED_PIN, LOW);
-//    digitalWrite(LT_YEL_PIN, LOW);
-//    digitalWrite(LT_GRN_PIN, LOW);
-//    digitalWrite(LT_BLU_PIN, HIGH);
-//  }
-
-
-//  motor_a.setThrottle(50);
-//  motor_b.setThrottle(50);
-//  motor_c.setThrottle(50);
-//  motor_d.setThrottle(50);
-//
-//  delay(4000);
-//
-//  motor_a.setThrottle(0);
-//  motor_b.setThrottle(0);
-//  motor_c.setThrottle(0);
-//  motor_d.setThrottle(0);
-//
-//  delay(4000);
-//
-//  motor_a.setThrottle(-50);
-//  motor_b.setThrottle(-50);
-//  motor_c.setThrottle(-50);
-//  motor_d.setThrottle(-50);
-//
-//  delay(4000);
-//
-//  motor_a.setThrottle(0);
-//  motor_b.setThrottle(0);
-//  motor_c.setThrottle(0);
-//  motor_d.setThrottle(0);
-//
-//  delay(4000);
 }
-/*
 
-  for (counter = throttleMax - 1; counter >= -1 * throttleMax; counter--) {
-    Serial.println("Decc: counter = ");
-    Serial.println(counter);
-    motor_a.setThrottle(counter);
-    delay(100);
-  }
-*/
-
-//  if (xTranslation > 0) {
-//
-//     motor_a.setThrottle(100);
-//     motor_b.setThrottle(100);
-//     motor_c.setThrottle(100);
-//     motor_d.setThrottle(100);
-//     Serial.println("Forward Surge");
-//  } // Forward Surge
-//
-//
-//
-//  if (xTranslation < 0) {
-//
-//     motor_a.setThrottle(-100);
-//     motor_b.setThrottle(-100);
-//     motor_c.setThrottle(-100);
-//     motor_d.setThrottle(-100);
-//     Serial.println("Backward Surge");
-//  } //Backward Surge
-//
-//
-//
-//  if (yTranslation > 0) {
-//
-//     motor_a.setThrottle(-100);
-//     motor_b.setThrottle(-100);
-//     motor_c.setThrottle(100);
-//     motor_d.setThrottle(100);
-//     Serial.println("Forward Sway");
-//  } //Forward Sway
-//
-//
-//
-//
-//  if (yTranslation < 0) {
-//
-//     motor_a.setThrottle(100);
-//     motor_b.setThrottle(100);
-//     motor_c.setThrottle(-100);
-//     motor_d.setThrottle(-100);
-//     Serial.println("Backward Sway");
-//  } //Backward Sway
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//Loop
