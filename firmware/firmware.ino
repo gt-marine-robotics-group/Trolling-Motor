@@ -142,7 +142,15 @@ ServoInputPin<ORX_ELEV_PIN> orxElev; // Continuous
 ServoInputPin<ORX_AILE_PIN> orxAile; // Continuous
 ServoInputPin<ORX_THRO_PIN> orxThro; // Continuous
 
+int cmd_srg;
+int cmd_swy;
+int cmd_yaw;
+int cmd_ctr;
 
+int cmd_a;
+int cmd_b;
+int cmd_c;
+int cmd_d;
 
 
 // FUNCTIONS --------------------------------------------------------
@@ -150,17 +158,30 @@ void subscription_callback(const void * msgin) {
   Serial.println("CALLBACK");
 }
 
-// Calibrate controller function
-void calibrate_controller() {
-  continue();
-}
 
 // Check current RC status (in order to minimize time polling)
-void read_controller() {
-  continue();
+void read_rc() {
+  cmd_srg = orxElev.mapDeadzone(-100, 101, 0.05);
+  cmd_swy = orxAile.mapDeadzone(-100, 101, 0.05);
+  cmd_yaw = orxRudd.mapDeadzone(-100, 101, 0.05);
+  cmd_ctr = orxAux1.map(0, 3);
 }
 
 // Translate RC input to 4x holonomic motor system
+// A - Port Aft, B - Starboard Aft, C - Starboard Fore, D - Port Fore
+void set_motor_4x() {
+  int a = (cmd_srg + cmd_swy - cmd_yaw);
+  int b = (cmd_srg - cmd_swy + cmd_yaw);
+  int c = (cmd_srg + cmd_swy + cmd_yaw);
+  int d = (cmd_srg - cmd_swy - cmd_yaw);
+  float max_val = max(100, max(max(abs(a), abs(b)), max(abs(c), abs(d)))) / 100;
+  
+  cmd_a = a / max_val;
+  cmd_b = b / max_val;
+  cmd_c = c / max_val;
+  cmd_d = d / max_val;
+}
+
 
 // Translate RC input to 2 motor system
 
@@ -172,22 +193,122 @@ void set_light_tower(int r, int y, int g, int b) {
 }
 
 
+
+template<uint8_t bs>
+bool calibrate_pin(ServoInputPin<bs> &input_pin) {
+  const uint16_t pulse = (uint16_t) input_pin.getPulseRaw();
+  // Check + store range min/max
+  if (pulse < input_pin.getRangeMin()) {
+    input_pin.setRangeMin(pulse);
+  }
+  else if (pulse > input_pin.getRangeMax()) {
+    input_pin.setRangeMax(pulse);
+  }
+  char buffer[100];
+  sprintf(buffer, "Servo PWM (us) | Min: %4u  Val: %4u  Max: %4u | Range: %4u", 
+    input_pin.getRangeMin(), pulse, input_pin.getRangeMax(), input_pin.getRange());
+  //Serial.println(buffer);
+  if (input_pin.getRange() < 50 and input_pin.mapDeadzone(-100,100, .02) != 0){
+    return false;
+  }
+  return true;
+}
+
+bool calibrate_rc() {
+  // Get servo signal pulse length, in microseconds (unfiltered)
+  bool e_s = calibrate_pin(orxElev);
+  bool a_s = calibrate_pin(orxAile);
+  bool r_s = calibrate_pin(orxRudd);
+  char buffer[100];
+  sprintf(buffer, "Calibrated Values | Elev: %4i  Aile: %4i  Rudd: %4i", 
+    orxElev.mapDeadzone(-100, 100, 0.05), orxAile.mapDeadzone(-100, 100, 0.05), orxRudd.mapDeadzone(-100, 100, 0.05));
+  Serial.println(buffer);
+  return (e_s and a_s and r_s);
+}
+
+template<uint8_t bs>
+void center_pin(ServoInputPin<bs> &input_pin) {
+  int center = input_pin.getRangeCenter(); 
+  input_pin.setRange(center, center); 
+}
+
+void center_rc() {
+  center_pin(orxElev);
+  center_pin(orxAile);
+  center_pin(orxRudd);
+}
+
+void exec_mode(int mode) {
+  if (mode == 0){
+    // Autonomous
+    Serial.println("Autonomous");
+    set_lt(0, 0, 1, 0);
+  }
+  else if (mode == 1) {
+    // Calibrate
+    calibrate_rc();
+    set_lt(1, 1, 0, 0);
+  }
+  else if (mode == 2) {
+    set_motor_4x();
+    set_lt(0, 1, 0, 0);
+    char buffer[100];
+     sprintf(buffer, "Manual | A: %4i  B: %4i  C: %4i D: %4i", 
+    cmd_a, cmd_b, cmd_c, cmd_d);
+    Serial.println(buffer);
+  }
+  else {
+    Serial.println("Error, mode not supported");
+  }
+}
+
+void setup_lt() {
+  pinMode(LT_RED_PIN, OUTPUT);
+  pinMode(LT_YEL_PIN, OUTPUT);
+  pinMode(LT_GRN_PIN, OUTPUT);
+  pinMode(LT_BLU_PIN, OUTPUT);
+}
+
+void set_lt(bool r, bool y, bool g, bool b) {
+  digitalWrite(LT_RED_PIN, r);
+  digitalWrite(LT_YEL_PIN, y);
+  digitalWrite(LT_GRN_PIN, g);
+  digitalWrite(LT_BLU_PIN, b);
+}
+
 void setup() {
   Serial.begin(9600);
   delay(100);
   Serial.println("NOVA MOTOR STARTING...");
 
-  delay(500);
-  Serial.println("R...");
-  delay(500);
-  pinMode(LT_RED_PIN, OUTPUT);
-  Serial.println("Y...");
-  pinMode(LT_YEL_PIN, OUTPUT);
-  Serial.println("G...");
-  pinMode(LT_GRN_PIN, OUTPUT);
-  Serial.println("B...");
-  pinMode(LT_BLU_PIN, OUTPUT);
+  Serial.println("SETTING UP LIGHT TOWER...");
+  setup_lt();
+  set_lt(1, 1, 0, 0);
 
+  Serial.println("CALIBRATING CONTROLLER...");
+  bool mode_ready = false;
+  bool calibration_ready = false;
+  int calibration_zero_check = 0;
+  center_rc();
+  while(not mode_ready or not calibration_ready or calibration_zero_check < 15) {
+    read_rc();
+    if (cmd_ctr == 1) {
+      mode_ready = true;
+    }
+    calibration_ready = calibrate_rc();
+    if (cmd_srg + cmd_swy + cmd_yaw == 0) {
+      calibration_zero_check += 1;
+    }
+    else {
+      calibration_zero_check = 0;
+    }
+  }
+
+
+  delay(500);
+  
+  
+  Serial.println("INITIALIZING MOTOR CONTROLLERS...");
   motor_a.init();
   motor_b.init();
   motor_c.init();
@@ -196,9 +317,6 @@ void setup() {
   Serial.println("==================================================");
   Serial.println("============ NOVA MOTOR INIT COMPLETE ============");
   Serial.println("==================================================");
-
-  // Setup light tower
-
 }
 
 /*
@@ -217,78 +335,86 @@ int yaw;
 */
 
 
+
+
+
+
+
 void loop() {
   // Demo test loop
-  Serial.println("LOOPING...");
-  int counter;
-  //  direction=2;   //BWD
-  //  set_direction(direction);
-
+  
   // Polling R/C commands
   // TODO: Make this use an interrupt callback that ensures that control state is switched immediately
-  //From orcs-comms/firmware/firmware.ino
-  //  killed = orxGear.getBoolean();
-  state = orxAux1.map(0, 3);
-  Serial.println(state);
+  read_rc();
+  exec_mode(cmd_ctr);
+  
+
+//  Serial.print(cmd_srg);
+//  Serial.print(", ");
+//  Serial.print(cmd_swy);
+//  Serial.print(", ");
+//  Serial.print(cmd_yaw);
+//  Serial.print(", ");
+//  Serial.println(cmd_ctr);
   //  xTranslation = orxElev.map(-100, 100);
   //  yTranslation = orxAile.map(-100, 100);
   //  yaw = orxRudd.map(-100, 100);
   //From orcs-comms/firmware/firmware.ino
 
-  if (state == 2) {
-    Serial.println("RC");
-    digitalWrite(LT_RED_PIN, LOW);
-    digitalWrite(LT_YEL_PIN, HIGH);
-    digitalWrite(LT_GRN_PIN, LOW);
-    digitalWrite(LT_BLU_PIN, LOW);
-  } else if (state == 1) {
-    Serial.println("PAUSE");
-    digitalWrite(LT_RED_PIN, HIGH);
-    digitalWrite(LT_YEL_PIN, LOW);
-    digitalWrite(LT_GRN_PIN, LOW);
-    digitalWrite(LT_BLU_PIN, LOW);
-  } else if (state == 0) {
-    Serial.println("AUTO");
-    digitalWrite(LT_RED_PIN, LOW);
-    digitalWrite(LT_YEL_PIN, LOW);
-    digitalWrite(LT_GRN_PIN, HIGH);
-    digitalWrite(LT_BLU_PIN, LOW);
-  } else {
-    Serial.println("AUX");
-    digitalWrite(LT_RED_PIN, LOW);
-    digitalWrite(LT_YEL_PIN, LOW);
-    digitalWrite(LT_GRN_PIN, LOW);
-    digitalWrite(LT_BLU_PIN, HIGH);
-  }
+//  if (state == 2) {
+//    Serial.println("RC");
+//    digitalWrite(LT_RED_PIN, LOW);
+//    digitalWrite(LT_YEL_PIN, HIGH);
+//    digitalWrite(LT_GRN_PIN, LOW);
+//    digitalWrite(LT_BLU_PIN, LOW);
+//  } else if (state == 1) {
+//    Serial.println("PAUSE");
+//    digitalWrite(LT_RED_PIN, HIGH);
+//    digitalWrite(LT_YEL_PIN, LOW);
+//    digitalWrite(LT_GRN_PIN, LOW);
+//    digitalWrite(LT_BLU_PIN, LOW);
+//  } else if (state == 0) {
+//    Serial.println("AUTO");
+//    digitalWrite(LT_RED_PIN, LOW);
+//    digitalWrite(LT_YEL_PIN, LOW);
+//    digitalWrite(LT_GRN_PIN, HIGH);
+//    digitalWrite(LT_BLU_PIN, LOW);
+//  } else {
+//    Serial.println("AUX");
+//    digitalWrite(LT_RED_PIN, LOW);
+//    digitalWrite(LT_YEL_PIN, LOW);
+//    digitalWrite(LT_GRN_PIN, LOW);
+//    digitalWrite(LT_BLU_PIN, HIGH);
+//  }
 
 
-  motor_a.setThrottle(50);
-  motor_b.setThrottle(50);
-  motor_c.setThrottle(50);
-  motor_d.setThrottle(50);
-
-  delay(4000);
-
-  motor_a.setThrottle(0);
-  motor_b.setThrottle(0);
-  motor_c.setThrottle(0);
-  motor_d.setThrottle(0);
-
-  delay(4000);
-
-  motor_a.setThrottle(-50);
-  motor_b.setThrottle(-50);
-  motor_c.setThrottle(-50);
-  motor_d.setThrottle(-50);
-
-  delay(4000);
-
-  motor_a.setThrottle(0);
-  motor_b.setThrottle(0);
-  motor_c.setThrottle(0);
-  motor_d.setThrottle(0);
-
-  delay(4000);
+//  motor_a.setThrottle(50);
+//  motor_b.setThrottle(50);
+//  motor_c.setThrottle(50);
+//  motor_d.setThrottle(50);
+//
+//  delay(4000);
+//
+//  motor_a.setThrottle(0);
+//  motor_b.setThrottle(0);
+//  motor_c.setThrottle(0);
+//  motor_d.setThrottle(0);
+//
+//  delay(4000);
+//
+//  motor_a.setThrottle(-50);
+//  motor_b.setThrottle(-50);
+//  motor_c.setThrottle(-50);
+//  motor_d.setThrottle(-50);
+//
+//  delay(4000);
+//
+//  motor_a.setThrottle(0);
+//  motor_b.setThrottle(0);
+//  motor_c.setThrottle(0);
+//  motor_d.setThrottle(0);
+//
+//  delay(4000);
 }
 /*
 
