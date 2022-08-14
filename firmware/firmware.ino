@@ -121,7 +121,8 @@ int m_signal = 0;
 bool debug = true;
 int control_state = 1; // 0 - KILLED | 1 - STANDBY | 2 - MANUAL | 3 - AUTONOMOUS | 4 - AUXILIARY
 // add a blinking delay for restoring power after kill state
-
+unsigned long loop_time = 0;
+unsigned long last_time = 0;
 
 // DEVICES ----------------------------------------------------------
 // MOTORS
@@ -241,22 +242,24 @@ void center_rc() {
 
 void exec_mode(int mode, bool killed) {
   if (killed) {
-    set_lt(1, 0, 0, 0);
+    // TODO: Listen for killed on actual E-stop circuit in case of manual shutoff
+    // TODO: Add a time delay before resuming from killed state with blink
+    run_lt(1, 0, 0, 0);
   }
   else {
     if (mode == 0){
     // Autonomous
     Serial.println("Autonomous");
-    set_lt(0, 0, 1, 0);
+    run_lt(0, 0, 1, 0);
     }
     else if (mode == 1) {
       // Calibrate
       calibrate_rc();
-      set_lt(1, 1, 0, 0);
+      run_lt(0, 2, 0, 0);
     }
     else if (mode == 2) {
       set_motor_4x();
-      set_lt(0, 1, 0, 0);
+      run_lt(0, 1, 0, 0);
       char buffer[100];
        sprintf(buffer, "Manual | A: %4i  B: %4i  C: %4i D: %4i", 
       cmd_a, cmd_b, cmd_c, cmd_d);
@@ -267,6 +270,9 @@ void exec_mode(int mode, bool killed) {
     }
   }
 }
+
+// LIGHT TOWER VARS AND FUNCTIONS
+// TODO: Split into separate library
 
 void setup_lt() {
   pinMode(LT_RED_PIN, OUTPUT);
@@ -282,6 +288,34 @@ void set_lt(bool r, bool y, bool g, bool b) {
   digitalWrite(LT_BLU_PIN, b);
 }
 
+void set_light(int pin, int flash) {
+  bool light_on =  false;
+  if (flash == 0) {
+    light_on = false;
+  }
+  else if (flash == 1) {
+    light_on = true;
+  }
+  else if (flash == 2) {
+    if (loop_time % 500 <= 200) {
+      light_on = true;
+    }
+  }
+  else if (flash == 3) {
+    if (loop_time % 1000 <= 400) {
+      light_on = true;
+    }
+  }
+  digitalWrite(pin, light_on);
+}
+
+void run_lt(int r, int y, int g, int b) {
+  set_light(LT_RED_PIN, r);
+  set_light(LT_YEL_PIN, y);
+  set_light(LT_GRN_PIN, g);
+  set_light(LT_BLU_PIN, b);  
+}
+
 //https://github.com/micro-ROS/micro_ros_arduino/blob/humble/examples/micro-ros_publisher/micro-ros_publisher.ino
 //https://github.com/micro-ROS/micro_ros_arduino/blob/humble/examples/micro-ros_subscriber/micro-ros_subscriber.ino
 //rcl_publisher_t publisher;
@@ -294,6 +328,7 @@ void set_lt(bool r, bool y, bool g, bool b) {
 
 void setup() {
   Serial.begin(9600);
+  loop_time = millis();
   //set_microros_transports();
   //delay(2000);
   //allocator = rcl_get_default_allocator();
@@ -322,7 +357,6 @@ void setup() {
 
   Serial.println("SETTING UP LIGHT TOWER...");
   setup_lt();
-  set_lt(1, 1, 0, 0);
 
   Serial.println("CALIBRATING CONTROLLER...");
   bool mode_ready = false;
@@ -330,6 +364,8 @@ void setup() {
   int calibration_zero_check = 0;
   center_rc();
   while(not mode_ready or not calibration_ready or calibration_zero_check < 15) {
+    loop_time = millis();
+    run_lt(0, 2, 0, 0);
     read_rc();
     if (cmd_ctr == 1) {
       mode_ready = true;
@@ -358,6 +394,8 @@ void setup() {
 
 
 void loop() {
+  // Get loop time
+  loop_time = millis();
   // Polling R/C commands
   read_rc();
   // Execute based on mode
