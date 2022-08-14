@@ -138,16 +138,16 @@ ServoInputPin<ORX_ELEV_PIN> orxElev; // Continuous
 ServoInputPin<ORX_AILE_PIN> orxAile; // Continuous
 ServoInputPin<ORX_THRO_PIN> orxThro; // Continuous
 
-int cmd_srg;
-int cmd_swy;
-int cmd_yaw;
-int cmd_ctr;
+int cmd_srg; // Commanded Surge
+int cmd_swy; // Commanded Sway
+int cmd_yaw; // Commanded Yaw
+int cmd_ctr; // Commanded Control State
+int cmd_kil; // Commanded Kill State
 
 int cmd_a;
 int cmd_b;
 int cmd_c;
 int cmd_d;
-
 
 // FUNCTIONS --------------------------------------------------------
 void subscription_callback(const void * msgin) {
@@ -160,6 +160,11 @@ void read_rc() {
   cmd_swy = orxAile.mapDeadzone(-100, 101, 0.05);
   cmd_yaw = orxRudd.mapDeadzone(-100, 101, 0.05);
   cmd_ctr = orxAux1.map(0, 3);
+  cmd_kil = orxGear.map(0, 1);
+  char buffer[100];
+  sprintf(buffer, "RC | SRG: %4i  SWY: %4i  YAW: %4i CTR: %1i KIL: %1i", 
+    cmd_srg, cmd_swy, cmd_yaw, cmd_ctr, cmd_kil);
+  //Serial.println(buffer);
 }
 
 // Translate RC input to 4x holonomic motor system
@@ -170,7 +175,6 @@ void set_motor_4x() {
   int c = (cmd_srg + cmd_swy + cmd_yaw);
   int d = (cmd_srg - cmd_swy - cmd_yaw);
   float max_val = max(100, max(max(abs(a), abs(b)), max(abs(c), abs(d)))) / 100.0;
-  Serial.println(max_val);
   cmd_a = a / max_val;
   cmd_b = b / max_val;
   cmd_c = c / max_val;
@@ -219,7 +223,7 @@ bool calibrate_rc() {
   char buffer[100];
   sprintf(buffer, "Calibrated Values | Elev: %4i  Aile: %4i  Rudd: %4i", 
     orxElev.mapDeadzone(-100, 100, 0.05), orxAile.mapDeadzone(-100, 100, 0.05), orxRudd.mapDeadzone(-100, 100, 0.05));
-  Serial.println(buffer);
+  //Serial.println(buffer);
   return (e_s and a_s and r_s);
 }
 
@@ -235,27 +239,32 @@ void center_rc() {
   center_pin(orxRudd);
 }
 
-void exec_mode(int mode) {
-  if (mode == 0){
+void exec_mode(int mode, bool killed) {
+  if (killed) {
+    set_lt(1, 0, 0, 0);
+  }
+  else {
+    if (mode == 0){
     // Autonomous
     Serial.println("Autonomous");
     set_lt(0, 0, 1, 0);
-  }
-  else if (mode == 1) {
-    // Calibrate
-    calibrate_rc();
-    set_lt(1, 1, 0, 0);
-  }
-  else if (mode == 2) {
-    set_motor_4x();
-    set_lt(0, 1, 0, 0);
-    char buffer[100];
-     sprintf(buffer, "Manual | A: %4i  B: %4i  C: %4i D: %4i", 
-    cmd_a, cmd_b, cmd_c, cmd_d);
-    Serial.println(buffer);
-  }
-  else {
-    Serial.println("Error, mode not supported");
+    }
+    else if (mode == 1) {
+      // Calibrate
+      calibrate_rc();
+      set_lt(1, 1, 0, 0);
+    }
+    else if (mode == 2) {
+      set_motor_4x();
+      set_lt(0, 1, 0, 0);
+      char buffer[100];
+       sprintf(buffer, "Manual | A: %4i  B: %4i  C: %4i D: %4i", 
+      cmd_a, cmd_b, cmd_c, cmd_d);
+      Serial.println(buffer);
+    }
+    else {
+      Serial.println("Error, mode not supported");
+    }
   }
 }
 
@@ -282,13 +291,6 @@ void set_lt(bool r, bool y, bool g, bool b) {
 //rcl_allocator_t allocator;
 //rcl_node_t node;
 //rcl_timer_t timer;
-
-int vehicleState;
-bool killed;
-int state;
-int xTranslation;
-int yTranslation;
-int yaw;
 
 void setup() {
   Serial.begin(9600);
@@ -359,6 +361,6 @@ void loop() {
   // Polling R/C commands
   read_rc();
   // Execute based on mode
-  exec_mode(cmd_ctr);
+  exec_mode(cmd_ctr, cmd_kil);
   //RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
 }
