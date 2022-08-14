@@ -169,8 +169,8 @@ void set_motor_4x() {
   int b = (cmd_srg - cmd_swy + cmd_yaw);
   int c = (cmd_srg + cmd_swy + cmd_yaw);
   int d = (cmd_srg - cmd_swy - cmd_yaw);
-  float max_val = max(100, max(max(abs(a), abs(b)), max(abs(c), abs(d)))) / 100;
-  
+  float max_val = max(100, max(max(abs(a), abs(b)), max(abs(c), abs(d)))) / 100.0;
+  Serial.println(max_val);
   cmd_a = a / max_val;
   cmd_b = b / max_val;
   cmd_c = c / max_val;
@@ -362,4 +362,3 @@ void loop() {
   exec_mode(cmd_ctr);
   //RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
 }
-
