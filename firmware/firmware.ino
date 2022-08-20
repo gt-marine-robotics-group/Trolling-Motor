@@ -89,24 +89,28 @@ const int A_THRO_UD_PIN = 11;
 const int A_THRO_INC_PIN = 10;
 const int A_DIR_SEL0_PIN = 9;
 const int A_DIR_SEL1_PIN = 8;
+const int A_THRO_RESISTANCE = LAPX9C10X_X9C104;
 // MOTOR BRAVO
 const int B_THRO_CS_PIN = 7;
 const int B_THRO_UD_PIN = 6;
 const int B_THRO_INC_PIN = 5;
 const int B_DIR_SEL0_PIN = 4;
 const int B_DIR_SEL1_PIN = 3;
+const int B_THRO_RESISTANCE = LAPX9C10X_X9C104;
 // MOTOR CHARLIE
 const int C_THRO_CS_PIN = 14;
 const int C_THRO_UD_PIN = 15;
 const int C_THRO_INC_PIN = 16;
 const int C_DIR_SEL0_PIN = 17;
 const int C_DIR_SEL1_PIN = 18;
+const int C_THRO_RESISTANCE = LAPX9C10X_X9C104;
 // MOTOR DELTA
 const int D_THRO_CS_PIN = 23;
 const int D_THRO_UD_PIN = 25;
 const int D_THRO_INC_PIN = 27;
 const int D_DIR_SEL0_PIN = 29;
 const int D_DIR_SEL1_PIN = 31;
+const int D_THRO_RESISTANCE = LAPX9C10X_X9C104;
 
 // LIGHT TOWER
 const int LT_RED_PIN = A4;
@@ -126,10 +130,10 @@ unsigned long last_time = 0;
 
 // DEVICES ----------------------------------------------------------
 // MOTORS
-Motor motor_a(A_THRO_INC_PIN, A_THRO_UD_PIN, A_THRO_CS_PIN, THRO_RESISTANCE, A_DIR_SEL0_PIN, A_DIR_SEL1_PIN);
-Motor motor_b(B_THRO_INC_PIN, B_THRO_UD_PIN, B_THRO_CS_PIN, THRO_RESISTANCE, B_DIR_SEL0_PIN, B_DIR_SEL1_PIN);
-Motor motor_c(C_THRO_INC_PIN, C_THRO_UD_PIN, C_THRO_CS_PIN, THRO_RESISTANCE, C_DIR_SEL0_PIN, C_DIR_SEL1_PIN);
-Motor motor_d(D_THRO_INC_PIN, D_THRO_UD_PIN, D_THRO_CS_PIN, THRO_RESISTANCE, D_DIR_SEL0_PIN, D_DIR_SEL1_PIN);
+Motor motor_a(A_THRO_INC_PIN, A_THRO_UD_PIN, A_THRO_CS_PIN, A_THRO_RESISTANCE, A_DIR_SEL0_PIN, A_DIR_SEL1_PIN);
+Motor motor_b(B_THRO_INC_PIN, B_THRO_UD_PIN, B_THRO_CS_PIN, B_THRO_RESISTANCE, B_DIR_SEL0_PIN, B_DIR_SEL1_PIN);
+Motor motor_c(C_THRO_INC_PIN, C_THRO_UD_PIN, C_THRO_CS_PIN, C_THRO_RESISTANCE, C_DIR_SEL0_PIN, C_DIR_SEL1_PIN);
+Motor motor_d(D_THRO_INC_PIN, D_THRO_UD_PIN, D_THRO_CS_PIN, D_THRO_RESISTANCE, D_DIR_SEL0_PIN, D_DIR_SEL1_PIN);
 
 // RC INPUTS
 ServoInputPin<ORX_AUX1_PIN> orxAux1; // 3 states - Manual / Paused / Autonomous
@@ -169,12 +173,12 @@ void read_rc() {
 }
 
 // Translate RC input to 4x holonomic motor system
-// A - Port Aft, B - Starboard Aft, C - Starboard Fore, D - Port Fore
+// A - Port Aft, D - Starboard Aft, C - Starboard Fore, B - Port Fore
 void set_motor_4x() {
   int a = (cmd_srg + cmd_swy - cmd_yaw);
-  int b = (cmd_srg - cmd_swy + cmd_yaw);
+  int b = (cmd_srg - cmd_swy - cmd_yaw);
   int c = (cmd_srg + cmd_swy + cmd_yaw);
-  int d = (cmd_srg - cmd_swy - cmd_yaw);
+  int d = (cmd_srg - cmd_swy + cmd_yaw);
   float max_val = max(100, max(max(abs(a), abs(b)), max(abs(c), abs(d)))) / 100.0;
   cmd_a = a / max_val;
   cmd_b = b / max_val;
@@ -185,10 +189,12 @@ void set_motor_4x() {
 // Translate RC input to 2 motor system
 void set_motor_2x() {
   int a = (cmd_srg - cmd_yaw);
-  int b = (cmd_srg + cmd_yaw);
+  int d = (cmd_srg + cmd_yaw);
   float max_val = max(100, max(abs(a), abs(b))) / 100;
   cmd_a = a / max_val;
-  cmd_b = b / max_val;
+  cmd_b = 0;
+  cmd_c = 0;
+  cmd_d = d / max_val;
 }
 
 void set_light_tower(int r, int y, int g, int b) {
@@ -264,6 +270,10 @@ void exec_mode(int mode, bool killed) {
        sprintf(buffer, "Manual | A: %4i  B: %4i  C: %4i D: %4i", 
       cmd_a, cmd_b, cmd_c, cmd_d);
       Serial.println(buffer);
+      motor_a.set_throttle(cmd_a);
+      motor_b.set_throttle(cmd_b);
+      motor_c.set_throttle(cmd_c);
+      motor_d.set_throttle(cmd_d);
     }
     else {
       Serial.println("Error, mode not supported");
