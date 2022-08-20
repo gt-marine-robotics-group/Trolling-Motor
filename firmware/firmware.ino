@@ -165,7 +165,7 @@ void read_rc() {
   cmd_swy = orxAile.mapDeadzone(-100, 101, 0.05);
   cmd_yaw = orxRudd.mapDeadzone(-100, 101, 0.05);
   cmd_ctr = orxAux1.map(0, 3);
-  cmd_kil = orxGear.map(0, 1);
+  cmd_kil = orxGear.map(1, 0);
   char buffer[100];
   sprintf(buffer, "RC | SRG: %4i  SWY: %4i  YAW: %4i CTR: %1i KIL: %1i", 
     cmd_srg, cmd_swy, cmd_yaw, cmd_ctr, cmd_kil);
@@ -190,7 +190,7 @@ void set_motor_4x() {
 void set_motor_2x() {
   int a = (cmd_srg - cmd_yaw);
   int d = (cmd_srg + cmd_yaw);
-  float max_val = max(100, max(abs(a), abs(b))) / 100;
+  float max_val = max(100, max(abs(a), abs(d))) / 100;
   cmd_a = a / max_val;
   cmd_b = 0;
   cmd_c = 0;
@@ -270,10 +270,10 @@ void exec_mode(int mode, bool killed) {
        sprintf(buffer, "Manual | A: %4i  B: %4i  C: %4i D: %4i", 
       cmd_a, cmd_b, cmd_c, cmd_d);
       Serial.println(buffer);
-      motor_a.set_throttle(cmd_a);
-      motor_b.set_throttle(cmd_b);
-      motor_c.set_throttle(cmd_c);
-      motor_d.set_throttle(cmd_d);
+      motor_a.setThrottle(cmd_a);
+      motor_b.setThrottle(cmd_b);
+      motor_c.setThrottle(cmd_c);
+      motor_d.setThrottle(cmd_d);
     }
     else {
       Serial.println("Error, mode not supported");
@@ -409,6 +409,7 @@ void loop() {
   // Polling R/C commands
   read_rc();
   // Execute based on mode
+  // Serial.println("execute");
   exec_mode(cmd_ctr, cmd_kil);
   //RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
 }
