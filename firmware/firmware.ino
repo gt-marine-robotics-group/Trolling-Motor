@@ -251,6 +251,10 @@ void exec_mode(int mode, bool killed) {
     // TODO: Listen for killed on actual E-stop circuit in case of manual shutoff
     // TODO: Add a time delay before resuming from killed state with blink
     run_lt(1, 0, 0, 0);
+    motor_a.setThrottle(0);
+    motor_b.setThrottle(0);
+    motor_c.setThrottle(0);
+    motor_d.setThrottle(0);
   }
   else {
     if (mode == 0){
@@ -262,6 +266,10 @@ void exec_mode(int mode, bool killed) {
       // Calibrate
       calibrate_rc();
       run_lt(0, 2, 0, 0);
+      motor_a.setThrottle(0);
+      motor_b.setThrottle(0);
+      motor_c.setThrottle(0);
+      motor_d.setThrottle(0);
     }
     else if (mode == 2) {
       set_motor_4x();
@@ -396,6 +404,10 @@ void setup() {
   motor_b.init();
   motor_c.init();
   motor_d.init();
+  motor_a.setThrottle(0);
+  motor_b.setThrottle(0);
+  motor_c.setThrottle(0);
+  motor_d.setThrottle(0);
 
   Serial.println("==================================================");
   Serial.println("============ NOVA MOTOR INIT COMPLETE ============");
