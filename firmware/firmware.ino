@@ -197,11 +197,6 @@ void set_motor_2x() {
   cmd_d = d / max_val;
 }
 
-void set_light_tower(int r, int y, int g, int b) {
-  // -1 = off | 0 = on | else frequency in hz
-  Serial.println("ToDo");
-}
-
 template<uint8_t bs>
 bool calibrate_pin(ServoInputPin<bs> &input_pin) {
   const uint16_t pulse = (uint16_t) input_pin.getPulseRaw();
