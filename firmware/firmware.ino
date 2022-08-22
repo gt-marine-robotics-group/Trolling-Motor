@@ -89,28 +89,28 @@ const int A_THRO_UD_PIN = 11;
 const int A_THRO_INC_PIN = 10;
 const int A_DIR_SEL0_PIN = 9;
 const int A_DIR_SEL1_PIN = 8;
-const int A_THRO_RESISTANCE = LAPX9C10X_X9C104;
+const int A_THRO_RESISTANCE = 66;
 // MOTOR BRAVO
 const int B_THRO_CS_PIN = 7;
 const int B_THRO_UD_PIN = 6;
 const int B_THRO_INC_PIN = 5;
 const int B_DIR_SEL0_PIN = 4;
 const int B_DIR_SEL1_PIN = 3;
-const int B_THRO_RESISTANCE = LAPX9C10X_X9C104;
+const int B_THRO_RESISTANCE = 87;
 // MOTOR CHARLIE
 const int C_THRO_CS_PIN = 14;
 const int C_THRO_UD_PIN = 15;
 const int C_THRO_INC_PIN = 16;
 const int C_DIR_SEL0_PIN = 17;
 const int C_DIR_SEL1_PIN = 18;
-const int C_THRO_RESISTANCE = LAPX9C10X_X9C104;
+const int C_THRO_RESISTANCE = 74;
 // MOTOR DELTA
 const int D_THRO_CS_PIN = 23;
 const int D_THRO_UD_PIN = 25;
 const int D_THRO_INC_PIN = 27;
 const int D_DIR_SEL0_PIN = 29;
 const int D_DIR_SEL1_PIN = 31;
-const int D_THRO_RESISTANCE = LAPX9C10X_X9C104;
+const int D_THRO_RESISTANCE = 100;
 
 // LIGHT TOWER
 const int LT_RED_PIN = A4;
@@ -256,6 +256,10 @@ void exec_mode(int mode, bool killed) {
     // Autonomous
     Serial.println("Autonomous");
     run_lt(0, 0, 1, 0);
+    motor_a.setThrottle(0);
+    motor_b.setThrottle(0);
+    motor_c.setThrottle(0);
+    motor_d.setThrottle(0);
     }
     else if (mode == 1) {
       // Calibrate
