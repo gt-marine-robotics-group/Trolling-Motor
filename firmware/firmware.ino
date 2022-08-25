@@ -67,10 +67,13 @@ class Motor {
       pinMode(dirOnePin, OUTPUT);
       pinMode(dirTwoPin, OUTPUT);
     }
-    bool setThrottle(int throttleValue) {
+    bool setThrottle(int throttleValue) { // In terms of resistance
       setDirection(throttleValue);
-      throttle->reset(abs(throttleValue));
+      throttle->set(float(abs(throttleValue)));
       return true;
+    }
+    void resetThrottle() {
+      throttle->reset(0);
     }
 };
 
