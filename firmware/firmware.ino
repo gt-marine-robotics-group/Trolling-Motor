@@ -28,6 +28,8 @@
   Resources
   https://stackoverflow.com/questions/6504211/is-it-possible-to-include-a-library-from-another-library-using-the-arduino-ide
 */
+#define LIMIT_RESISTANCE 60
+#define eToK(e) ((uint8_t) (((e) * LIMIT_RESISTANCE / 100)))
 
 class Motor {
   private:
@@ -255,6 +257,10 @@ void exec_mode(int mode, bool killed) {
     motor_d.setThrottle(0);
   }
   else {
+    motor_a.resetThrottle();
+    motor_b.resetThrottle();
+    motor_c.resetThrottle();
+    motor_d.resetThrottle();
     if (mode == 0){
     // Autonomous
     Serial.println("Autonomous");
@@ -280,10 +286,10 @@ void exec_mode(int mode, bool killed) {
        sprintf(buffer, "Manual | A: %4i  B: %4i  C: %4i D: %4i", 
       cmd_a, cmd_b, cmd_c, cmd_d);
       Serial.println(buffer);
-      motor_a.setThrottle(cmd_a);
-      motor_b.setThrottle(cmd_b);
-      motor_c.setThrottle(cmd_c);
-      motor_d.setThrottle(cmd_d);
+      motor_a.setThrottle(eToK(cmd_a));
+      motor_b.setThrottle(eToK(cmd_b));
+      motor_c.setThrottle(eToK(cmd_c));
+      motor_d.setThrottle(eToK(cmd_d));
     }
     else {
       Serial.println("Error, mode not supported");
