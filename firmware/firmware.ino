@@ -1,13 +1,13 @@
 #include <LapX9C10X.h>
 #include <ServoInput.h>
 
-//#include <micro_ros_arduino.h>
-//#include <stdio.h>
-//#include <rcl/rcl.h>
-//#include <rcl/error_handling.h>
-//#include <rclc/rclc.h>
-//#include <rclc/executor.h>
-//#include <std_msgs/msg/int32.h>
+#include <micro_ros_arduino.h>
+#include <stdio.h>
+#include <rcl/rcl.h>
+#include <rcl/error_handling.h>
+#include <rclc/rclc.h>
+#include <rclc/executor.h>
+#include <std_msgs/msg/int32.h>
 
 /*
   GITMRG Supernova V1.1 Custom Trolling Motor Driver
@@ -30,6 +30,14 @@
 */
 #define LIMIT_RESISTANCE 60
 #define eToK(e) ((uint8_t) (((e) * LIMIT_RESISTANCE / 100)))
+#define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){error_loop();}}
+#define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
+
+void error_loop(){
+  while(1){
+    delay(100);
+  }
+}
 
 class Motor {
   private:
@@ -342,80 +350,103 @@ void run_lt(int r, int y, int g, int b) {
   set_light(LT_BLU_PIN, b);  
 }
 
+// MicroROS
 //https://github.com/micro-ROS/micro_ros_arduino/blob/humble/examples/micro-ros_publisher/micro-ros_publisher.ino
 //https://github.com/micro-ROS/micro_ros_arduino/blob/humble/examples/micro-ros_subscriber/micro-ros_subscriber.ino
-//rcl_publisher_t publisher;
-//std_msgs__msg__Int32 msg;
-//rclc_executor_t executor;
-//rclc_support_t support;
-//rcl_allocator_t allocator;
-//rcl_node_t node;
-//rcl_timer_t timer;
+rcl_publisher_t publisher;
+rclc_executor_t executor;
+std_msgs__msg__Int32 msg;
+rcl_allocator_t allocator;
+rclc_support_t support;
+rcl_node_t node;
+rcl_timer_t timer;
+
+void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
+{  
+  RCLC_UNUSED(last_call_time);
+  if (timer != NULL) {
+    RCSOFTCHECK(rcl_publish(&publisher, &msg, NULL));
+    msg.data++;
+  }
+}
+
+void microros_init() {
+  // Initialize micro-ROS allocator
+  set_microros_transports();
+  delay(2000);
+  allocator = rcl_get_default_allocator();
+
+  //create init_options
+  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+  // create node
+  RCCHECK(rclc_node_init_default(&node, "micro_ros_arduino_node", "", &support));
+  // create publisher
+  RCCHECK(rclc_publisher_init_default(
+    &publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+    "micro_ros_arduino_node_publisher"));
+
+  // create timer,
+  const unsigned int timer_timeout = 1000;
+  RCCHECK(rclc_timer_init_default(
+    &timer,
+    &support,
+    RCL_MS_TO_NS(timer_timeout),
+    timer_callback));
+
+  // create executor
+  RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
+  RCCHECK(rclc_executor_add_timer(&executor, &timer));
+
+  msg.data = 0;
+}
 
 void setup() {
   Serial.begin(9600);
+  delay(1000);
   loop_time = millis();
-  //set_microros_transports();
-  //delay(2000);
-  //allocator = rcl_get_default_allocator();
-  // Create init_options
-  //RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
-  // Create node
-  //RCCHECK(rclc_node_init_default(&node, "micro_ros_arduino_node", "", &support));
-  // Create publisher
-  //RCCHECK(rclc_publisher_init_default(
-  //  &publisher,
-  //  &node,
-  //  ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-  //  "micro_ros_arduino_node_publisher"));
-  // create subscriber
-  //RCCHECK(rclc_subscription_init_default(
-  //  &subscriber,
-  //  &node,
-  //  ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-  //  "micro_ros_arduino_subscriber"));
-  // Create executor
-  //RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
-  //RCCHECK(rclc_executor_add_timer(&executor, &timer));
-  //RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA));
+
   delay(100);
   Serial.println("NOVA MOTOR STARTING...");
+  delay(100);
+  microros_init();
 
   Serial.println("SETTING UP LIGHT TOWER...");
   setup_lt();
 
   Serial.println("CALIBRATING CONTROLLER...");
-  bool mode_ready = false;
-  bool calibration_ready = false;
-  int calibration_zero_check = 0;
-  center_rc();
-  while(not mode_ready or not calibration_ready or calibration_zero_check < 15) {
-    loop_time = millis();
-    run_lt(0, 2, 0, 0);
-    read_rc();
-    if (cmd_ctr == 1) {
-      mode_ready = true;
-    }
-    calibration_ready = calibrate_rc();
-    if (cmd_srg + cmd_swy + cmd_yaw == 0) {
-      calibration_zero_check += 1;
-    }
-    else {
-      calibration_zero_check = 0;
-    }
-  }
+//  bool mode_ready = false;
+//  bool calibration_ready = false;
+//  int calibration_zero_check = 0;
+//  center_rc();
+//  while(not mode_ready or not calibration_ready or calibration_zero_check < 15) {
+//    loop_time = millis();
+//    run_lt(0, 2, 0, 0);
+//    read_rc();
+//    if (cmd_ctr == 1) {
+//      mode_ready = true;
+//    }
+//    calibration_ready = calibrate_rc();
+//    if (cmd_srg + cmd_swy + cmd_yaw == 0) {
+//      calibration_zero_check += 1;
+//    }
+//    else {
+//      calibration_zero_check = 0;
+//    }
+//  }
 
   delay(500);
   
   Serial.println("INITIALIZING MOTOR CONTROLLERS...");
-  motor_a.init();
-  motor_b.init();
-  motor_c.init();
-  motor_d.init();
-  motor_a.setThrottle(0);
-  motor_b.setThrottle(0);
-  motor_c.setThrottle(0);
-  motor_d.setThrottle(0);
+//  motor_a.init();
+//  motor_b.init();
+//  motor_c.init();
+//  motor_d.init();
+//  motor_a.setThrottle(0);
+//  motor_b.setThrottle(0);
+//  motor_c.setThrottle(0);
+//  motor_d.setThrottle(0);
 
   Serial.println("==================================================");
   Serial.println("============ NOVA MOTOR INIT COMPLETE ============");
@@ -424,12 +455,6 @@ void setup() {
 
 
 void loop() {
-  // Get loop time
-  loop_time = millis();
-  // Polling R/C commands
-  read_rc();
-  // Execute based on mode
-  // Serial.println("execute");
-  exec_mode(cmd_ctr, cmd_kil);
-  //RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
+  delay(100);
+  RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
 }
