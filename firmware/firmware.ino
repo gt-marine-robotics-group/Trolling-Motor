@@ -434,14 +434,14 @@ void setup() {
   delay(500);
   
   Serial.println("INITIALIZING MOTOR CONTROLLERS...");
-  motor_a.init();
-  motor_b.init();
-  motor_c.init();
-  motor_d.init();
-  motor_a.setThrottle(0);
-  motor_b.setThrottle(0);
-  motor_c.setThrottle(0);
-  motor_d.setThrottle(0);
+//  motor_a.init();
+//  motor_b.init();
+//  motor_c.init();
+//  motor_d.init();
+//  motor_a.setThrottle(0);
+//  motor_b.setThrottle(0);
+//  motor_c.setThrottle(0);
+//  motor_d.setThrottle(0);
 
   Serial.println("==================================================");
   Serial.println("============ NOVA MOTOR INIT COMPLETE ============");
@@ -453,9 +453,9 @@ void loop() {
   // Get loop time
   loop_time = millis();
   // Polling R/C commands
-  read_rc();
+  // read_rc();
   // Execute based on mode
   // Serial.println("execute");
-  exec_mode(cmd_ctr, cmd_kil);
+  // exec_mode(cmd_ctr, cmd_kil);
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
 }
