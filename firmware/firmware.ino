@@ -8,7 +8,7 @@
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 #include <std_msgs/msg/int32.h>
-
+#include <std_msgs/msg/float32.h>
 /*
   GITMRG Supernova V1.1 Custom Trolling Motor Driver
 
@@ -156,16 +156,24 @@ ServoInputPin<ORX_ELEV_PIN> orxElev; // Continuous
 ServoInputPin<ORX_AILE_PIN> orxAile; // Continuous
 ServoInputPin<ORX_THRO_PIN> orxThro; // Continuous
 
+//Nick Code :^[
+// ROS GLOBAL VARIABLES
+
 int cmd_srg; // Commanded Surge
 int cmd_swy; // Commanded Sway
 int cmd_yaw; // Commanded Yaw
-int cmd_ctr; // Commanded Control State
+int rc_cmd_ctr; // Commanded Control State
 int cmd_kil; // Commanded Kill State
 
-int cmd_a;
-int cmd_b;
-int cmd_c;
-int cmd_d;
+int rc_cmd_a;
+int rc_cmd_b;
+int rc_cmd_c;
+int rc_cmd_d;
+
+int ros_cmd_a;
+int ros_cmd_b;
+int ros_cmd_c;
+int ros_cmd_d;
 
 // FUNCTIONS --------------------------------------------------------
 
@@ -174,11 +182,11 @@ void read_rc() {
   cmd_srg = orxElev.mapDeadzone(-100, 101, 0.05);
   cmd_swy = orxAile.mapDeadzone(-100, 101, 0.05);
   cmd_yaw = orxRudd.mapDeadzone(-100, 101, 0.05);
-  cmd_ctr = orxAux1.map(0, 3);
+  rc_cmd_ctr = orxAux1.map(0, 3);
   cmd_kil = orxGear.map(1, 0);
   char buffer[100];
   sprintf(buffer, "RC | SRG: %4i  SWY: %4i  YAW: %4i CTR: %1i KIL: %1i", 
-    cmd_srg, cmd_swy, cmd_yaw, cmd_ctr, cmd_kil);
+    cmd_srg, cmd_swy, cmd_yaw, rc_cmd_ctr, cmd_kil);
   //Serial.println(buffer);
 }
 
@@ -190,10 +198,10 @@ void set_motor_4x() {
   int c = (cmd_srg + cmd_swy + cmd_yaw);
   int d = (cmd_srg - cmd_swy + cmd_yaw);
   float max_val = max(100, max(max(abs(a), abs(b)), max(abs(c), abs(d)))) / 100.0;
-  cmd_a = a / max_val;
-  cmd_b = b / max_val;
-  cmd_c = c / max_val;
-  cmd_d = d / max_val;
+  rc_cmd_a = a / max_val;
+  rc_cmd_b = b / max_val;
+  rc_cmd_c = c / max_val;
+  rc_cmd_d = d / max_val;
 }
 
 // Translate RC input to 2 motor system
@@ -201,10 +209,10 @@ void set_motor_2x() {
   int a = (cmd_srg - cmd_yaw);
   int d = (cmd_srg + cmd_yaw);
   float max_val = max(100, max(abs(a), abs(d))) / 100;
-  cmd_a = a / max_val;
-  cmd_b = 0;
-  cmd_c = 0;
-  cmd_d = d / max_val;
+  rc_cmd_a = a / max_val;
+  rc_cmd_b = 0;
+  rc_cmd_c = 0;
+  rc_cmd_d = d / max_val;
 }
 
 template<uint8_t bs>
@@ -251,56 +259,7 @@ void center_rc() {
   center_pin(orxRudd);
 }
 
-void exec_mode(int mode, bool killed) {
-  if (killed) {
-    // TODO: Listen for killed on actual E-stop circuit in case of manual shutoff
-    // TODO: Add a time delay before resuming from killed state with blink
-    run_lt(1, 0, 0, 0);
-    motor_a.setThrottle(0);
-    motor_b.setThrottle(0);
-    motor_c.setThrottle(0);
-    motor_d.setThrottle(0);
-  }
-  else {
-    motor_a.resetThrottle();
-    motor_b.resetThrottle();
-    motor_c.resetThrottle();
-    motor_d.resetThrottle();
-    if (mode == 0){
-    // Autonomous
-    Serial.println("Autonomous");
-    run_lt(0, 0, 1, 0);
-    motor_a.setThrottle(0);
-    motor_b.setThrottle(0);
-    motor_c.setThrottle(0);
-    motor_d.setThrottle(0);
-    }
-    else if (mode == 1) {
-      // Calibrate
-      calibrate_rc();
-      run_lt(0, 2, 0, 0);
-      motor_a.setThrottle(0);
-      motor_b.setThrottle(0);
-      motor_c.setThrottle(0);
-      motor_d.setThrottle(0);
-    }
-    else if (mode == 2) {
-      set_motor_4x();
-      run_lt(0, 1, 0, 0);
-      char buffer[100];
-       sprintf(buffer, "Manual | A: %4i  B: %4i  C: %4i D: %4i", 
-      cmd_a, cmd_b, cmd_c, cmd_d);
-      Serial.println(buffer);
-      motor_a.setThrottle(eToK(cmd_a));
-      motor_b.setThrottle(eToK(cmd_b));
-      motor_c.setThrottle(eToK(cmd_c));
-      motor_d.setThrottle(eToK(cmd_d));
-    }
-    else {
-      Serial.println("Error, mode not supported");
-    }
-  }
-}
+
 
 // LIGHT TOWER VARS AND FUNCTIONS
 // TODO: Split into separate library
@@ -349,10 +308,21 @@ void run_lt(int r, int y, int g, int b) {
 
 //https://github.com/micro-ROS/micro_ros_arduino/blob/humble/examples/micro-ros_publisher/micro-ros_publisher.ino
 //https://github.com/micro-ROS/micro_ros_arduino/blob/humble/examples/micro-ros_subscriber/micro-ros_subscriber.ino
-rcl_publisher_t publisher;
-rcl_subscription_t subscriber;
+rcl_publisher_t vehicle_state_pub;
+//rcl_subscription_t subscriber;
+
+rcl_subscription_t motor_a_sub; // A (left_rear)
+rcl_subscription_t motor_b_sub; //Nick Code  :C // B (left_front)
+rcl_subscription_t motor_c_sub; // C (right_front)
+rcl_subscription_t motor_d_sub; // D (right_rear)
+
 rclc_executor_t executor;
 std_msgs__msg__Int32 msg;
+std_msgs__msg__Int32 msg_a;
+std_msgs__msg__Int32 msg_b;
+std_msgs__msg__Int32 msg_c;
+std_msgs__msg__Int32 msg_d;
+
 rcl_allocator_t allocator;
 rclc_support_t support;
 rcl_node_t node;
@@ -362,7 +332,37 @@ rcl_timer_t timer;
 void subscription_callback(const void * msgin)
 {  
   const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
-  RCSOFTCHECK(rcl_publish(&publisher, &msg, NULL));
+  RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg, NULL));
+}
+
+//Nick Code :^(
+
+void left_rear_callback(const void * msgin) 
+{
+  ros_cmd_a = (int) &msgin;
+//  Serial.print("ros_left_rear_thrust: ");
+//  Serial.println(ros_left_rear_thrust);
+}
+
+void left_front_callback(const void * msgin) 
+{
+  ros_cmd_b = (int) &msgin;
+//  Serial.print("ros_left_front_thrust: ");
+//  Serial.println(ros_left_front_thrust);
+}
+
+void right_front_callback(const void * msgin) 
+{
+  ros_cmd_c = (int) &msgin;
+//  Serial.print("ros_right_front_thrust: ");
+//  Serial.println(ros_right_front_thrust);
+}
+
+void right_rear_callback(const void * msgin) 
+{
+  ros_cmd_d = (int) &msgin;
+//  Serial.print("ros_right_rear_thrust: ");
+//  Serial.println(ros_right_rear_thrust);
 }
 
 void microros_init() {
@@ -373,34 +373,125 @@ void microros_init() {
 
   //create init_options
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+  
   // create node
   RCCHECK(rclc_node_init_default(&node, "micro_ros_arduino_node", "", &support));
+  
   // create publisher
   RCCHECK(rclc_publisher_init_default(
-    &publisher,
+    &vehicle_state_pub,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "micro_ros_arduino_node_publisher"));
+    "/nova/vehicle_state"));
+  
   // create subscriber
-  RCCHECK(rclc_subscription_init_default(
-    &subscriber,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "micro_ros_arduino_subscriber"));
+//  RCCHECK(rclc_subscription_init_default(
+//    &subscriber,
+//    &node,
+//    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+//    "micro_ros_arduino_subscriber"));
 
+  //Nick Code >:-(
+
+  // create thrust subscribers
+  RCCHECK(rclc_subscription_init_default(
+    &motor_b_sub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+    "/wamv/thrusters/left_front_thrust_cmd"));
+
+  RCCHECK(rclc_subscription_init_default(
+    &motor_c_sub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+    "/wamv/thrusters/right_front_thrust_cmd"));
+
+  RCCHECK(rclc_subscription_init_default(
+    &motor_a_sub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+    "/wamv/thrusters/left_rear_thrust_cmd"));
+
+  RCCHECK(rclc_subscription_init_default(
+    &motor_d_sub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+    "/wamv/thrusters/right_rear_thrust_cmd"));
+   
   // create timer,
-  const unsigned int timer_timeout = 1000;
+  // const unsigned int timer_timeout = 1000;
 
   // create executor
-  RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
-  RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_init(&executor, &support.context, 4, &allocator)); // Increment this for more subs
+  // RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg0, &subscription_callback, ON_NEW_DATA));
 
+  //Nick Code :-l
+  RCCHECK(rclc_executor_add_subscription(&executor, &motor_a_sub, &msg_a, &left_rear_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &motor_b_sub, &msg_b, &left_rear_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &motor_c_sub, &msg_c, &right_rear_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &motor_d_sub, &msg_d, &right_rear_callback, ON_NEW_DATA));
+  
   msg.data = 0;
+  msg_a.data = 0;
+  msg_b.data = 0;
+  msg_c.data = 0;
+  msg_d.data = 0;
 }
 
+void exec_mode(int mode, bool killed) {
+  // Publish Vehicle State
+  std_msgs__msg__Int32 * msg;
+  msg->data = mode;
+  RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg, NULL));
+  // Vehicle Logic
+  if (killed) {
+    // TODO: Listen for killed on actual E-stop circuit in case of manual shutoff
+    // TODO: Add a time delay before resuming from killed state with blink
+    run_lt(1, 0, 0, 0);
+    motor_a.setThrottle(0);
+    motor_b.setThrottle(0);
+    motor_c.setThrottle(0);
+    motor_d.setThrottle(0);
+  }
+  else {
+    motor_a.resetThrottle();
+    motor_b.resetThrottle();
+    motor_c.resetThrottle();
+    motor_d.resetThrottle();
+    if (mode == 0){ // AUTONOMOUS
+      run_lt(0, 0, 1, 0);
+      motor_a.setThrottle(eToK(ros_cmd_a));
+      motor_b.setThrottle(eToK(ros_cmd_b));
+      motor_c.setThrottle(eToK(ros_cmd_c));
+      motor_d.setThrottle(eToK(ros_cmd_d));
+    }
+    else if (mode == 1) { // CALIBRATION
+      calibrate_rc();
+      run_lt(0, 2, 0, 0);
+      motor_a.setThrottle(0);
+      motor_b.setThrottle(0);
+      motor_c.setThrottle(0);
+      motor_d.setThrottle(0);
+    }
+    else if (mode == 2) { // REMOTE CONTROL
+      set_motor_4x();
+      run_lt(0, 1, 0, 0);
+//      char buffer[100];
+//       sprintf(buffer, "Manual | A: %4i  B: %4i  C: %4i D: %4i", 
+//      rc_cmd_a, rc_cmd_b, rc_cmd_c, rc_cmd_d);
+//      Serial.println(buffer);
+      motor_a.setThrottle(eToK(rc_cmd_a));
+      motor_b.setThrottle(eToK(rc_cmd_b));
+      motor_c.setThrottle(eToK(rc_cmd_c));
+      motor_d.setThrottle(eToK(rc_cmd_d));
+    }
+    else {
+      Serial.println("Error, mode not supported");
+    }
+  }
+}
 
-
-void setup() {
+void  setup() {
   Serial.begin(9600);
   loop_time = millis();
  
@@ -414,34 +505,34 @@ void setup() {
   bool mode_ready = false;
   bool calibration_ready = false;
   int calibration_zero_check = 0;
-//  center_rc();
-//  while(not mode_ready or not calibration_ready or calibration_zero_check < 15) {
-//    loop_time = millis();
-//    run_lt(0, 2, 0, 0);
-//    read_rc();
-//    if (cmd_ctr == 1) {
-//      mode_ready = true;
-//    }
-//    calibration_ready = calibrate_rc();
-//    if (cmd_srg + cmd_swy + cmd_yaw == 0) {
-//      calibration_zero_check += 1;
-//    }
-//    else {
-//      calibration_zero_check = 0;
-//    }
-//  }
+  center_rc();
+  while(not mode_ready or not calibration_ready or calibration_zero_check < 15) {
+    loop_time = millis();
+    run_lt(0, 2, 0, 0);
+    read_rc();
+    if (rc_cmd_ctr == 1) {
+      mode_ready = true;
+    }
+    calibration_ready = calibrate_rc();
+    if (cmd_srg + cmd_swy + cmd_yaw == 0) {
+      calibration_zero_check += 1;
+    }
+    else {
+      calibration_zero_check = 0;
+    }
+  }
 
   delay(500);
   
   Serial.println("INITIALIZING MOTOR CONTROLLERS...");
-//  motor_a.init();
-//  motor_b.init();
-//  motor_c.init();
-//  motor_d.init();
-//  motor_a.setThrottle(0);
-//  motor_b.setThrottle(0);
-//  motor_c.setThrottle(0);
-//  motor_d.setThrottle(0);
+  motor_a.init();
+  motor_b.init();
+  motor_c.init();
+  motor_d.init();
+  motor_a.setThrottle(0);
+  motor_b.setThrottle(0);
+  motor_c.setThrottle(0);
+  motor_d.setThrottle(0);
 
   Serial.println("==================================================");
   Serial.println("============ NOVA MOTOR INIT COMPLETE ============");
@@ -453,9 +544,10 @@ void loop() {
   // Get loop time
   loop_time = millis();
   // Polling R/C commands
-  // read_rc();
+  read_rc();
   // Execute based on mode
   // Serial.println("execute");
-  // exec_mode(cmd_ctr, cmd_kil);
+  exec_mode(rc_cmd_ctr, cmd_kil);
+  // exec_mode(0, cmd_kil);
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
 }
