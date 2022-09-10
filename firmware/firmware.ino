@@ -162,7 +162,7 @@ ServoInputPin<ORX_THRO_PIN> orxThro; // Continuous
 int cmd_srg; // Commanded Surge
 int cmd_swy; // Commanded Sway
 int cmd_yaw; // Commanded Yaw
-int rc_cmd_ctr; // Commanded Control State
+int cmd_ctr; // Commanded Control State
 int cmd_kil; // Commanded Kill State
 
 int rc_cmd_a;
@@ -182,11 +182,11 @@ void read_rc() {
   cmd_srg = orxElev.mapDeadzone(-100, 101, 0.05);
   cmd_swy = orxAile.mapDeadzone(-100, 101, 0.05);
   cmd_yaw = orxRudd.mapDeadzone(-100, 101, 0.05);
-  rc_cmd_ctr = orxAux1.map(0, 3);
+  cmd_ctr = orxAux1.map(0, 3);
   cmd_kil = orxGear.map(1, 0);
   char buffer[100];
   sprintf(buffer, "RC | SRG: %4i  SWY: %4i  YAW: %4i CTR: %1i KIL: %1i", 
-    cmd_srg, cmd_swy, cmd_yaw, rc_cmd_ctr, cmd_kil);
+    cmd_srg, cmd_swy, cmd_yaw, cmd_ctr, cmd_kil);
   //Serial.println(buffer);
 }
 
@@ -328,7 +328,6 @@ rclc_support_t support;
 rcl_node_t node;
 rcl_timer_t timer;
 
-
 void subscription_callback(const void * msgin)
 {  
   const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
@@ -339,28 +338,36 @@ void subscription_callback(const void * msgin)
 
 void left_rear_callback(const void * msgin) 
 {
-  ros_cmd_a = (int) &msgin;
+  const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
+  float val = msg->data;
+  ros_cmd_a = val;
 //  Serial.print("ros_left_rear_thrust: ");
 //  Serial.println(ros_left_rear_thrust);
 }
 
 void left_front_callback(const void * msgin) 
 {
-  ros_cmd_b = (int) &msgin;
+  const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
+  float val = msg->data;
+  ros_cmd_b = val;
 //  Serial.print("ros_left_front_thrust: ");
 //  Serial.println(ros_left_front_thrust);
 }
 
 void right_front_callback(const void * msgin) 
 {
-  ros_cmd_c = (int) &msgin;
+  const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
+  float val = msg->data;
+  ros_cmd_c = val;
 //  Serial.print("ros_right_front_thrust: ");
 //  Serial.println(ros_right_front_thrust);
 }
 
 void right_rear_callback(const void * msgin) 
 {
-  ros_cmd_d = (int) &msgin;
+  const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
+  float val = msg->data;
+  ros_cmd_d = val;
 //  Serial.print("ros_right_rear_thrust: ");
 //  Serial.println(ros_right_rear_thrust);
 }
@@ -375,8 +382,9 @@ void microros_init() {
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
   
   // create node
-  RCCHECK(rclc_node_init_default(&node, "micro_ros_arduino_node", "", &support));
-  
+  rcl_node_options_t node_ops = rcl_node_get_default_options();
+  node_ops.domain_id = (size_t)(12);
+  RCCHECK(rclc_node_init_with_options(&node, "micro_ros_arduino_node", "", &support, &node_ops));
   // create publisher
   RCCHECK(rclc_publisher_init_default(
     &vehicle_state_pub,
@@ -427,8 +435,8 @@ void microros_init() {
 
   //Nick Code :-l
   RCCHECK(rclc_executor_add_subscription(&executor, &motor_a_sub, &msg_a, &left_rear_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor, &motor_b_sub, &msg_b, &left_rear_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor, &motor_c_sub, &msg_c, &right_rear_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &motor_b_sub, &msg_b, &left_front_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &motor_c_sub, &msg_c, &right_front_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &motor_d_sub, &msg_d, &right_rear_callback, ON_NEW_DATA));
   
   msg.data = 0;
@@ -440,9 +448,10 @@ void microros_init() {
 
 void exec_mode(int mode, bool killed) {
   // Publish Vehicle State
-  std_msgs__msg__Int32 * msg;
-  msg->data = mode;
-  RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg, NULL));
+  std_msgs__msg__Int32 msg_x;
+  //msg_x.data = mode;
+  msg_x.data = ros_cmd_b;
+  RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg_x, NULL));
   // Vehicle Logic
   if (killed) {
     // TODO: Listen for killed on actual E-stop circuit in case of manual shutoff
@@ -510,7 +519,7 @@ void  setup() {
     loop_time = millis();
     run_lt(0, 2, 0, 0);
     read_rc();
-    if (rc_cmd_ctr == 1) {
+    if (cmd_ctr == 1) {
       mode_ready = true;
     }
     calibration_ready = calibrate_rc();
@@ -547,7 +556,7 @@ void loop() {
   read_rc();
   // Execute based on mode
   // Serial.println("execute");
-  exec_mode(rc_cmd_ctr, cmd_kil);
+  exec_mode(cmd_ctr, cmd_kil);
   // exec_mode(0, cmd_kil);
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
 }
