@@ -7,6 +7,7 @@
 #include <rcl/error_handling.h>
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
+#include <rmw_microros/rmw_microros.h>
 #include <std_msgs/msg/int32.h>
 #include <std_msgs/msg/float32.h>
 /*
@@ -27,17 +28,28 @@
 
   Resources
   https://stackoverflow.com/questions/6504211/is-it-possible-to-include-a-library-from-another-library-using-the-arduino-ide
+  https://github.com/micro-ROS/micro_ros_arduino/blob/foxy/examples/micro-ros_reconnection_example/micro-ros_reconnection_example.ino
 */
 #define LIMIT_RESISTANCE 60
 #define eToK(e) ((uint8_t) (((e) * LIMIT_RESISTANCE / 100)))
-#define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){error_loop();}}
+#define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){return false;}}
 #define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
+#define EXECUTE_EVERY_N_MS(MS, X)  do { \
+  static volatile int64_t init = -1; \
+  if (init == -1) { init = uxr_millis();} \
+  if (uxr_millis() - init > MS) { X; init = uxr_millis();} \
+} while (0)\
 
-void error_loop(){
-  while(1){
-    delay(100);
-  }
+void error_cb(){
+  delay(10);
 }
+
+enum states {
+  WAITING_AGENT,
+  AGENT_AVAILABLE,
+  AGENT_CONNECTED,
+  AGENT_DISCONNECTED
+} state;
 
 class Motor {
   private:
@@ -372,10 +384,10 @@ void right_rear_callback(const void * msgin)
 //  Serial.println(ros_right_rear_thrust);
 }
 
-void microros_init() {
+bool ros_create_entities() {
   // Initialize micro-ROS allocator
-  set_microros_transports();
-  delay(2000);
+  
+  delay(1000);
   allocator = rcl_get_default_allocator();
 
   //create init_options
@@ -444,6 +456,21 @@ void microros_init() {
   msg_b.data = 0;
   msg_c.data = 0;
   msg_d.data = 0;
+  return true;
+}
+
+void ros_destroy_entities() {
+  rmw_context_t * rmw_context = rcl_context_get_rmw_context(&support.context);
+  (void) rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
+
+  rcl_publisher_fini(&vehicle_state_pub, &node);
+  rcl_subscription_fini(&motor_a_sub, &node);
+  rcl_subscription_fini(&motor_b_sub, &node);
+  rcl_subscription_fini(&motor_c_sub, &node);
+  rcl_subscription_fini(&motor_d_sub, &node);
+  rclc_executor_fini(&executor);
+  rcl_node_fini(&node);
+  rclc_support_fini(&support);
 }
 
 void exec_mode(int mode, bool killed) {
@@ -468,6 +495,7 @@ void exec_mode(int mode, bool killed) {
     motor_c.resetThrottle();
     motor_d.resetThrottle();
     if (mode == 0){ // AUTONOMOUS
+      ros_handler();
       run_lt(0, 0, 1, 0);
       motor_a.setThrottle(eToK(ros_cmd_a));
       motor_b.setThrottle(eToK(ros_cmd_b));
@@ -501,12 +529,12 @@ void exec_mode(int mode, bool killed) {
 }
 
 void  setup() {
+  set_microros_transports();
   Serial.begin(9600);
   loop_time = millis();
  
   delay(100);
   Serial.println("NOVA MOTOR STARTING...");
-  microros_init();
   Serial.println("SETTING UP LIGHT TOWER...");
   setup_lt();
 
@@ -548,6 +576,49 @@ void  setup() {
   Serial.println("==================================================");
 }
 
+void zero_all_motors() {
+  motor_a.setThrottle(0);
+  motor_b.setThrottle(0);
+  motor_c.setThrottle(0);
+  motor_d.setThrottle(0);
+}
+void zero_ros_cmds() {
+  ros_cmd_a = 0;
+  ros_cmd_b = 0;
+  ros_cmd_c = 0;
+  ros_cmd_d = 0;
+}
+
+
+void ros_handler() {
+  switch (state) {
+    case WAITING_AGENT:
+      run_lt(0, 0, 0, 1);
+      zero_ros_cmds();
+      EXECUTE_EVERY_N_MS(2000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;);
+      
+      break;
+    case AGENT_AVAILABLE:
+      state = (true == ros_create_entities()) ? AGENT_CONNECTED : WAITING_AGENT;
+      if (state == WAITING_AGENT) {
+        ros_destroy_entities();
+      };
+      break;
+    case AGENT_CONNECTED:
+      EXECUTE_EVERY_N_MS(1000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
+      if (state == AGENT_CONNECTED) {
+        rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+      }
+      break;
+    case AGENT_DISCONNECTED:
+      zero_ros_cmds();
+      ros_destroy_entities();
+      state = WAITING_AGENT;
+      break;
+    default:
+      break;
+  }
+}
 
 void loop() {
   // Get loop time
@@ -558,5 +629,4 @@ void loop() {
   // Serial.println("execute");
   exec_mode(cmd_ctr, cmd_kil);
   // exec_mode(0, cmd_kil);
-  RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
 }
