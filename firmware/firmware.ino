@@ -142,6 +142,10 @@ const int LT_RED_PIN = A4;
 const int LT_GRN_PIN = A3;
 const int LT_YEL_PIN = A5;
 const int LT_BLU_PIN = A6;
+int lt_red_state = 0;
+int lt_grn_state = 0;
+int lt_yel_state = 0;
+int lt_blu_state = 0;
 
 // VARS -------------------------------------------------------------
 const int THRO_RESISTANCE = LAPX9C10X_X9C104;
@@ -318,6 +322,13 @@ void run_lt(int r, int y, int g, int b) {
   set_light(LT_BLU_PIN, b);  
 }
 
+void cfg_lt(int r, int y, int g, int b){
+  lt_red_state = r;
+  lt_yel_state = y;
+  lt_grn_state = g;
+  lt_blu_state = b;
+}
+
 //https://github.com/micro-ROS/micro_ros_arduino/blob/humble/examples/micro-ros_publisher/micro-ros_publisher.ino
 //https://github.com/micro-ROS/micro_ros_arduino/blob/humble/examples/micro-ros_subscriber/micro-ros_subscriber.ino
 rcl_publisher_t vehicle_state_pub;
@@ -483,7 +494,7 @@ void exec_mode(int mode, bool killed) {
   if (killed) {
     // TODO: Listen for killed on actual E-stop circuit in case of manual shutoff
     // TODO: Add a time delay before resuming from killed state with blink
-    run_lt(1, 0, 0, 0);
+    cfg_lt(1, 0, 0, 0);
     motor_a.setThrottle(0);
     motor_b.setThrottle(0);
     motor_c.setThrottle(0);
@@ -496,7 +507,6 @@ void exec_mode(int mode, bool killed) {
     motor_d.resetThrottle();
     if (mode == 0){ // AUTONOMOUS
       ros_handler();
-      run_lt(0, 0, 1, 0);
       motor_a.setThrottle(eToK(ros_cmd_a));
       motor_b.setThrottle(eToK(ros_cmd_b));
       motor_c.setThrottle(eToK(ros_cmd_c));
@@ -504,7 +514,7 @@ void exec_mode(int mode, bool killed) {
     }
     else if (mode == 1) { // CALIBRATION
       calibrate_rc();
-      run_lt(0, 2, 0, 0);
+      cfg_lt(0, 2, 0, 0);
       motor_a.setThrottle(0);
       motor_b.setThrottle(0);
       motor_c.setThrottle(0);
@@ -512,7 +522,7 @@ void exec_mode(int mode, bool killed) {
     }
     else if (mode == 2) { // REMOTE CONTROL
       set_motor_4x();
-      run_lt(0, 1, 0, 0);
+      cfg_lt(0, 1, 0, 0);
 //      char buffer[100];
 //       sprintf(buffer, "Manual | A: %4i  B: %4i  C: %4i D: %4i", 
 //      rc_cmd_a, rc_cmd_b, rc_cmd_c, rc_cmd_d);
@@ -528,7 +538,7 @@ void exec_mode(int mode, bool killed) {
   }
 }
 
-void  setup() {
+void setup() {
   set_microros_transports();
   Serial.begin(9600);
   loop_time = millis();
@@ -570,6 +580,8 @@ void  setup() {
   motor_b.setThrottle(0);
   motor_c.setThrottle(0);
   motor_d.setThrottle(0);
+  
+  state = WAITING_AGENT;
 
   Serial.println("==================================================");
   Serial.println("============ NOVA MOTOR INIT COMPLETE ============");
@@ -593,24 +605,28 @@ void zero_ros_cmds() {
 void ros_handler() {
   switch (state) {
     case WAITING_AGENT:
-      run_lt(0, 0, 0, 1);
+      cfg_lt(0, 0, 3, 0);
       zero_ros_cmds();
       EXECUTE_EVERY_N_MS(2000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;);
       
       break;
     case AGENT_AVAILABLE:
+      cfg_lt(0, 0, 2, 0);
+      zero_ros_cmds();
       state = (true == ros_create_entities()) ? AGENT_CONNECTED : WAITING_AGENT;
       if (state == WAITING_AGENT) {
         ros_destroy_entities();
       };
       break;
     case AGENT_CONNECTED:
+      cfg_lt(0, 0, 1, 0);
       EXECUTE_EVERY_N_MS(1000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
       if (state == AGENT_CONNECTED) {
         rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
       }
       break;
     case AGENT_DISCONNECTED:
+      cfg_lt(0, 0, 3, 0);
       zero_ros_cmds();
       ros_destroy_entities();
       state = WAITING_AGENT;
@@ -626,7 +642,7 @@ void loop() {
   // Polling R/C commands
   read_rc();
   // Execute based on mode
-  // Serial.println("execute");
   exec_mode(cmd_ctr, cmd_kil);
-  // exec_mode(0, cmd_kil);
+  // Update light tower
+  run_lt(lt_red_state, lt_yel_state, lt_grn_state, lt_blu_state);
 }
