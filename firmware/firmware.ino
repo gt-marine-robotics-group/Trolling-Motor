@@ -489,7 +489,7 @@ void exec_mode(int mode, bool killed) {
   std_msgs__msg__Int32 msg_x;
   //msg_x.data = mode;
   msg_x.data = ros_cmd_b;
-  RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg_x, NULL));
+  
   // Vehicle Logic
   if (killed) {
     // TODO: Listen for killed on actual E-stop circuit in case of manual shutoff
@@ -535,6 +535,9 @@ void exec_mode(int mode, bool killed) {
     else {
       Serial.println("Error, mode not supported");
     }
+  }
+  if (state == AGENT_CONNECTED) {
+    RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg_x, NULL));
   }
 }
 
