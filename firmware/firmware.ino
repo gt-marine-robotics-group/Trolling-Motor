@@ -258,7 +258,7 @@ bool calibrate_rc() {
   bool r_s = calibrate_pin(orxRudd);
   char buffer[100];
   sprintf(buffer, "Calibrated Values | Elev: %4i  Aile: %4i  Rudd: %4i", 
-    orxElev.mapDeadzone(-100, 100, 0.05), orxAile.mapDeadzone(-100, 100, 0.05), orxRudd.mapDeadzone(-100, 100, 0.05));
+    orxElev.mapDeadzone(-100, 100, 0.1), orxAile.mapDeadzone(-100, 100, 0.1), orxRudd.mapDeadzone(-100, 100, 0.1));
   //Serial.println(buffer);
   return (e_s and a_s and r_s);
 }
@@ -536,13 +536,12 @@ void exec_mode(int mode, bool killed) {
       Serial.println("Error, mode not supported");
     }
   }
-  if (state == AGENT_CONNECTED) {
-    RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg_x, NULL));
-  }
+  //if (state == AGENT_CONNECTED) {
+  //  RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg_x, NULL));
+  //}
 }
 
 void setup() {
-  set_microros_transports();
   Serial.begin(9600);
   loop_time = millis();
  
@@ -551,6 +550,16 @@ void setup() {
   Serial.println("SETTING UP LIGHT TOWER...");
   setup_lt();
 
+  Serial.println("INITIALIZING MOTOR CONTROLLERS...");
+  motor_a.init();
+  motor_b.init();
+  motor_c.init();
+  motor_d.init();
+  motor_a.setThrottle(0);
+  motor_b.setThrottle(0);
+  motor_c.setThrottle(0);
+  motor_d.setThrottle(0);
+
   Serial.println("CALIBRATING CONTROLLER...");
   bool mode_ready = false;
   bool calibration_ready = false;
@@ -558,7 +567,7 @@ void setup() {
   center_rc();
   while(not mode_ready or not calibration_ready or calibration_zero_check < 15) {
     loop_time = millis();
-    run_lt(0, 2, 0, 0);
+    run_lt(2, 2, 0, 0);
     read_rc();
     if (cmd_ctr == 1) {
       mode_ready = true;
@@ -571,18 +580,9 @@ void setup() {
       calibration_zero_check = 0;
     }
   }
-
-  delay(500);
   
-  Serial.println("INITIALIZING MOTOR CONTROLLERS...");
-  motor_a.init();
-  motor_b.init();
-  motor_c.init();
-  motor_d.init();
-  motor_a.setThrottle(0);
-  motor_b.setThrottle(0);
-  motor_c.setThrottle(0);
-  motor_d.setThrottle(0);
+  delay(500);
+  set_microros_transports();
   
   state = WAITING_AGENT;
 
@@ -606,17 +606,22 @@ void zero_ros_cmds() {
 
 
 void ros_handler() {
+  bool created = false;
   switch (state) {
     case WAITING_AGENT:
       cfg_lt(0, 0, 3, 0);
       zero_ros_cmds();
+      zero_all_motors();
       EXECUTE_EVERY_N_MS(2000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;);
       
       break;
     case AGENT_AVAILABLE:
       cfg_lt(0, 0, 2, 0);
       zero_ros_cmds();
-      state = (true == ros_create_entities()) ? AGENT_CONNECTED : WAITING_AGENT;
+      zero_all_motors();
+      created = ros_create_entities();
+      state = (true == created) ? AGENT_CONNECTED : WAITING_AGENT;
+      delay(100);
       if (state == WAITING_AGENT) {
         ros_destroy_entities();
       };
@@ -624,14 +629,13 @@ void ros_handler() {
     case AGENT_CONNECTED:
       cfg_lt(0, 0, 1, 0);
       EXECUTE_EVERY_N_MS(1000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
-      if (state == AGENT_CONNECTED) {
-        rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
-      }
       break;
     case AGENT_DISCONNECTED:
-      cfg_lt(0, 0, 3, 0);
+      cfg_lt(3, 0, 3, 0);
       zero_ros_cmds();
+      zero_all_motors();
       ros_destroy_entities();
+      delay(100);
       state = WAITING_AGENT;
       break;
     default:
@@ -647,5 +651,11 @@ void loop() {
   // Execute based on mode
   exec_mode(cmd_ctr, cmd_kil);
   // Update light tower
+  if (cmd_kil == true) {
+    lt_red_state = 1;
+  }
   run_lt(lt_red_state, lt_yel_state, lt_grn_state, lt_blu_state);
+  if (state == AGENT_CONNECTED) {
+    rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+  }
 }
