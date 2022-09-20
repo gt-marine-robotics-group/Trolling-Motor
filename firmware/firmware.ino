@@ -31,7 +31,7 @@
   https://github.com/micro-ROS/micro_ros_arduino/blob/foxy/examples/micro-ros_reconnection_example/micro-ros_reconnection_example.ino
 */
 #define LIMIT_RESISTANCE 60
-#define eToK(e) ((uint8_t) (((e) * LIMIT_RESISTANCE / 100)))
+#define eToK(e) ((int8_t) (((e) * LIMIT_RESISTANCE / 100)))
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){return false;}}
 #define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
 #define EXECUTE_EVERY_N_MS(MS, X)  do { \
@@ -573,7 +573,7 @@ void setup() {
       mode_ready = true;
     }
     calibration_ready = calibrate_rc();
-    if (cmd_srg + cmd_swy + cmd_yaw == 0) {
+    if (abs(cmd_srg) + abs(cmd_swy) + abs(cmd_yaw) <= 4) {
       calibration_zero_check += 1;
     }
     else {
