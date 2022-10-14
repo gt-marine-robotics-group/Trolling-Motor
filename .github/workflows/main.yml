@@ -1,0 +1,14 @@
+site_name: GTMRG Wiki
+site_url: https://gt-marine-robotics-group.github.io/nova
+nav:
+  - Home: index.md
+  - Nova Motor Controller:
+    - Firmware: nova/firmware.md
+    - Supernova v1: nova/supernova_v1.md
+  - Dev Ops:
+    - Networking: devops/networking.md
+    - ROS Installation: 
+      - WSL: devops/ros/wsl.md
+      - VM: devops/ros/vm.md
+theme: readthedocs
+
