@@ -2,32 +2,32 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://gt-marine-robotics-group.github.io/</loc>
-         <lastmod>2022-10-14</lastmod>
+         <lastmod>2022-10-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://gt-marine-robotics-group.github.io/devops/networking/</loc>
-         <lastmod>2022-10-14</lastmod>
+         <lastmod>2022-10-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://gt-marine-robotics-group.github.io/devops/ros/vm/</loc>
-         <lastmod>2022-10-14</lastmod>
+         <lastmod>2022-10-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://gt-marine-robotics-group.github.io/devops/ros/wsl/</loc>
-         <lastmod>2022-10-14</lastmod>
+         <lastmod>2022-10-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://gt-marine-robotics-group.github.io/nova/firmware/</loc>
-         <lastmod>2022-10-14</lastmod>
+         <lastmod>2022-10-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://gt-marine-robotics-group.github.io/nova/supernova_v1/</loc>
-         <lastmod>2022-10-14</lastmod>
+         <lastmod>2022-10-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
