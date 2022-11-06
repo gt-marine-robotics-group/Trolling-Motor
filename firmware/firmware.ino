@@ -147,6 +147,10 @@ int lt_grn_state = 0;
 int lt_yel_state = 0;
 int lt_blu_state = 0;
 
+// ESTOP
+const int ESTOP_OUT_PIN = A8;
+const int ESTOP_SIG_PIN = A9;
+
 // VARS -------------------------------------------------------------
 const int THRO_RESISTANCE = LAPX9C10X_X9C104;
 const int throttleMax = 50;
@@ -180,6 +184,8 @@ int cmd_swy; // Commanded Sway
 int cmd_yaw; // Commanded Yaw
 int cmd_ctr; // Commanded Control State
 int cmd_kil; // Commanded Kill State
+
+int estop_state; // ESTOP HIGH or LOW (LOW = KILLED)
 
 int rc_cmd_a;
 int rc_cmd_b;
@@ -275,6 +281,16 @@ void center_rc() {
   center_pin(orxRudd);
 }
 
+// ESTOP MONITOR
+void setup_estop() {
+  pinMode(ESTOP_OUT_PIN, OUTPUT);
+  pinMode(ESTOP_SIG_PIN, INPUT_PULLUP);
+  digitalWrite(ESTOP_OUT_PIN, LOW);
+}
+
+void read_estop() {
+  estop_state = digitalRead(ESTOP_SIG_PIN);
+}
 
 
 // LIGHT TOWER VARS AND FUNCTIONS
@@ -544,10 +560,11 @@ void exec_mode(int mode, bool killed) {
 void setup() {
   Serial.begin(9600);
   loop_time = millis();
- 
+  
   delay(100);
   Serial.println("NOVA MOTOR STARTING...");
   Serial.println("SETTING UP LIGHT TOWER...");
+  setup_estop();
   setup_lt();
 
   Serial.println("INITIALIZING MOTOR CONTROLLERS...");
@@ -643,16 +660,25 @@ void ros_handler() {
   }
 }
 
+// TODO: Refactor to use control_state
+bool boat_killed = false;
+
 void loop() {
   // Get loop time
   loop_time = millis();
+  // E-Stop
+  read_estop();
   // Polling R/C commands
   read_rc();
   // Execute based on mode
-  exec_mode(cmd_ctr, cmd_kil);
+  boat_killed = estop_state;
+  exec_mode(cmd_ctr, boat_killed);
   // Update light tower
-  if (cmd_kil == true) {
+  if (estop_state == true) {
     lt_red_state = 1;
+  }
+  else {
+    lt_red_state = 0;
   }
   run_lt(lt_red_state, lt_yel_state, lt_grn_state, lt_blu_state);
   if (state == AGENT_CONNECTED) {
