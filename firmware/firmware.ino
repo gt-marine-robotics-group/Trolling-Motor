@@ -108,34 +108,37 @@ const int ORX_ELEV_PIN = 49; // WAM-V translate forward / backward
 const int ORX_AILE_PIN = 51; // WAM-V translate left / right
 const int ORX_THRO_PIN = 53;
 
+// OG: A: left rear, B: left front, C: right front, D: right rear
+// New: A: right rear, B: right front, C: left front, D: left rear
+
 // MOTOR ALFA
-const int C_THRO_CS_PIN = 12;
-const int C_THRO_UD_PIN = 11;
-const int C_THRO_INC_PIN = 10;
-const int C_DIR_SEL0_PIN = 9;
-const int C_DIR_SEL1_PIN = 8;
-const int C_THRO_RESISTANCE = 66;
+const int D_THRO_CS_PIN = 12;
+const int D_THRO_UD_PIN = 11;
+const int D_THRO_INC_PIN = 10;
+const int D_DIR_SEL0_PIN = 9;
+const int D_DIR_SEL1_PIN = 8;
+const int D_THRO_RESISTANCE = 66;
 // MOTOR BRAVO
-const int D_THRO_CS_PIN = 7;
-const int D_THRO_UD_PIN = 6;
-const int D_THRO_INC_PIN = 5;
-const int D_DIR_SEL0_PIN = 4;
-const int D_DIR_SEL1_PIN = 3;
-const int D_THRO_RESISTANCE = 87;
+const int C_THRO_CS_PIN = 7;
+const int C_THRO_UD_PIN = 6;
+const int C_THRO_INC_PIN = 5;
+const int C_DIR_SEL0_PIN = 4;
+const int C_DIR_SEL1_PIN = 3;
+const int C_THRO_RESISTANCE = 87;
 // MOTOR CHARLIE
-const int A_THRO_CS_PIN = 14;
-const int A_THRO_UD_PIN = 15;
-const int A_THRO_INC_PIN = 16;
-const int A_DIR_SEL0_PIN = 17;
-const int A_DIR_SEL1_PIN = 18;
-const int A_THRO_RESISTANCE = 74;
+const int B_THRO_CS_PIN = 14;
+const int B_THRO_UD_PIN = 15;
+const int B_THRO_INC_PIN = 16;
+const int B_DIR_SEL0_PIN = 17;
+const int B_DIR_SEL1_PIN = 18;
+const int B_THRO_RESISTANCE = 74;
 // MOTOR DELTA
-const int B_THRO_CS_PIN = 23;
-const int B_THRO_UD_PIN = 25;
-const int B_THRO_INC_PIN = 27;
-const int B_DIR_SEL0_PIN = 29;
-const int B_DIR_SEL1_PIN = 31;
-const int B_THRO_RESISTANCE = 100;
+const int A_THRO_CS_PIN = 23;
+const int A_THRO_UD_PIN = 25;
+const int A_THRO_INC_PIN = 27;
+const int A_DIR_SEL0_PIN = 29;
+const int A_DIR_SEL1_PIN = 31;
+const int A_THRO_RESISTANCE = 100;
 
 // LIGHT TOWER
 const int LT_RED_PIN = A4;
@@ -349,7 +352,8 @@ void cfg_lt(int r, int y, int g, int b){
 //https://github.com/micro-ROS/micro_ros_arduino/blob/humble/examples/micro-ros_subscriber/micro-ros_subscriber.ino
 rcl_publisher_t vehicle_state_pub;
 //rcl_subscription_t subscriber;
-
+// OG: A: left rear, B: left front, C: right front, D: right rear
+// New: A: right rear, B: right front, C: left front, D: left rear
 rcl_subscription_t motor_a_sub; // A (left_rear)
 rcl_subscription_t motor_b_sub; //Nick Code  :C // B (left_front)
 rcl_subscription_t motor_c_sub; // C (right_front)
@@ -372,10 +376,10 @@ rcl_timer_t timer;
 //  const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
 //  RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg, NULL));
 //}
-
+std_msgs__msg__Int32 state_msg;
 void vehicle_state_publish(int vehicle_state)
 {
-  const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32)vehicle_state;
+  state_msg.data = vehicle_state;
   RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg, NULL));
 }
 
