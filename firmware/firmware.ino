@@ -367,9 +367,15 @@ rclc_support_t support;
 rcl_node_t node;
 rcl_timer_t timer;
 
-void subscription_callback(const void * msgin)
-{  
-  const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
+//void subscription_callback(const void * msgin)
+//{  
+//  const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
+//  RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg, NULL));
+//}
+
+void vehicle_state_publish(int vehicle_state)
+{
+  const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32)vehicle_state;
   RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg, NULL));
 }
 
@@ -429,7 +435,7 @@ bool ros_create_entities() {
     &vehicle_state_pub,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "/nova/vehicle_state"));
+    "/wamv/nova/mode"));
   
   // create subscriber
 //  RCCHECK(rclc_subscription_init_default(
@@ -470,7 +476,7 @@ bool ros_create_entities() {
 
   // create executor
   RCCHECK(rclc_executor_init(&executor, &support.context, 4, &allocator)); // Increment this for more subs
-  // RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg0, &subscription_callback, ON_NEW_DATA));
+  // RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg0, &vehicle_state_callback, ON_NEW_DATA));
 
   //Nick Code :-l
   RCCHECK(rclc_executor_add_subscription(&executor, &motor_a_sub, &msg_a, &left_rear_callback, ON_NEW_DATA));
@@ -515,6 +521,7 @@ void exec_mode(int mode, bool killed) {
     motor_b.setThrottle(0);
     motor_c.setThrottle(0);
     motor_d.setThrottle(0);
+    msg_x.data = 3;
   }
   else {
     motor_a.resetThrottle();
@@ -527,6 +534,7 @@ void exec_mode(int mode, bool killed) {
       motor_b.setThrottle(eToK(ros_cmd_b));
       motor_c.setThrottle(eToK(ros_cmd_c));
       motor_d.setThrottle(eToK(ros_cmd_d));
+      msg_x.data = 2;
     }
     else if (mode == 1) { // CALIBRATION
       calibrate_rc();
@@ -535,6 +543,7 @@ void exec_mode(int mode, bool killed) {
       motor_b.setThrottle(0);
       motor_c.setThrottle(0);
       motor_d.setThrottle(0);
+      msg_x.data = 1;
     }
     else if (mode == 2) { // REMOTE CONTROL
       set_motor_4x();
@@ -547,6 +556,7 @@ void exec_mode(int mode, bool killed) {
       motor_b.setThrottle(eToK(rc_cmd_b));
       motor_c.setThrottle(eToK(rc_cmd_c));
       motor_d.setThrottle(eToK(rc_cmd_d));
+      msg_x.data = 1;
     }
     else {
       Serial.println("Error, mode not supported");
