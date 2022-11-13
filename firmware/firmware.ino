@@ -117,28 +117,28 @@ const int D_THRO_UD_PIN = 11;
 const int D_THRO_INC_PIN = 10;
 const int D_DIR_SEL0_PIN = 9;
 const int D_DIR_SEL1_PIN = 8;
-const int D_THRO_RESISTANCE = 66;
+const int D_THRO_RESISTANCE = 100; //66
 // MOTOR BRAVO
 const int C_THRO_CS_PIN = 7;
 const int C_THRO_UD_PIN = 6;
 const int C_THRO_INC_PIN = 5;
 const int C_DIR_SEL0_PIN = 4;
 const int C_DIR_SEL1_PIN = 3;
-const int C_THRO_RESISTANCE = 87;
+const int C_THRO_RESISTANCE = 100; //87
 // MOTOR CHARLIE
 const int B_THRO_CS_PIN = 14;
 const int B_THRO_UD_PIN = 15;
 const int B_THRO_INC_PIN = 16;
 const int B_DIR_SEL0_PIN = 17;
 const int B_DIR_SEL1_PIN = 18;
-const int B_THRO_RESISTANCE = 74;
+const int B_THRO_RESISTANCE = 100; //74
 // MOTOR DELTA
 const int A_THRO_CS_PIN = 23;
 const int A_THRO_UD_PIN = 25;
 const int A_THRO_INC_PIN = 27;
 const int A_DIR_SEL0_PIN = 29;
 const int A_DIR_SEL1_PIN = 31;
-const int A_THRO_RESISTANCE = 100;
+const int A_THRO_RESISTANCE = 100; //100
 
 // LIGHT TOWER
 const int LT_RED_PIN = A4;
@@ -156,7 +156,7 @@ const int ESTOP_SIG_PIN = A9;
 
 // VARS -------------------------------------------------------------
 const int THRO_RESISTANCE = LAPX9C10X_X9C104;
-const int throttleMax = 50;
+const int throttleMax = 100;
 int m_signal = 0;
 bool debug = true;
 int control_state = 1; // 0 - KILLED | 1 - STANDBY | 2 - MANUAL | 3 - AUTONOMOUS | 4 - AUXILIARY
