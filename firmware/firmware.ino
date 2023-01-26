@@ -1,5 +1,6 @@
 #include <LapX9C10X.h>
 #include <ServoInput.h>
+#include <Servo.h>
 
 #include <micro_ros_arduino.h>
 #include <stdio.h>
@@ -11,20 +12,9 @@
 #include <std_msgs/msg/int32.h>
 #include <std_msgs/msg/float32.h>
 /*
-  GITMRG Supernova V1.1 Custom Trolling Motor Driver
+  GITMRG Nova V1.1 Custom BLDC Thruster Driver
 
-  Interfaces with PWM Module through digital potentiometer
-  PWM Module is interfaced with NV-series 8-speed trolling motor.
-
-  v0.0 - 25 JUN 2022
-  by Sean Fish, Alvaro Pelaez
-  v1.0 - Latest
-  by Sean Fish, Nicholas Graham
-
-  Roadmap
-   - Version 0: Arduino Nano - Serial Commuication
-   - Version 1: Arduino Due - micro-ROS
-   - Version 2: Teensy 4.0 - micro-ROS
+  v1.1 RoboBoat Testing
 
   Resources
   https://stackoverflow.com/questions/6504211/is-it-possible-to-include-a-library-from-another-library-using-the-arduino-ide
@@ -112,33 +102,24 @@ const int ORX_THRO_PIN = 53;
 // New: A: right rear, B: right front, C: left front, D: left rear
 
 // MOTOR ALFA
-const int D_THRO_CS_PIN = 12;
-const int D_THRO_UD_PIN = 11;
-const int D_THRO_INC_PIN = 10;
-const int D_DIR_SEL0_PIN = 9;
-const int D_DIR_SEL1_PIN = 8;
-const int D_THRO_RESISTANCE = 100; //66
+const int A_SIG_PIN = 8;
+Servo motor_a;
 // MOTOR BRAVO
-const int C_THRO_CS_PIN = 7;
-const int C_THRO_UD_PIN = 6;
-const int C_THRO_INC_PIN = 5;
-const int C_DIR_SEL0_PIN = 4;
-const int C_DIR_SEL1_PIN = 3;
-const int C_THRO_RESISTANCE = 100; //87
+const int B_SIG_PIN = 9;
+Servo motor_b;
 // MOTOR CHARLIE
-const int B_THRO_CS_PIN = 14;
-const int B_THRO_UD_PIN = 15;
-const int B_THRO_INC_PIN = 16;
-const int B_DIR_SEL0_PIN = 17;
-const int B_DIR_SEL1_PIN = 18;
-const int B_THRO_RESISTANCE = 100; //74
+const int C_SIG_PIN = 10;
+Servo motor_c;
 // MOTOR DELTA
-const int A_THRO_CS_PIN = 23;
-const int A_THRO_UD_PIN = 25;
-const int A_THRO_INC_PIN = 27;
-const int A_DIR_SEL0_PIN = 29;
-const int A_DIR_SEL1_PIN = 31;
-const int A_THRO_RESISTANCE = 100; //100
+const int D_SIG_PIN = 11;
+Servo motor_d;
+// MOTOR ECHO
+const int E_SIG_PIN = 12;
+Servo motor_e;
+// MOTOR FOXTROT
+const int F_SIG_PIN = 13;
+Servo motor_f;
+
 
 // LIGHT TOWER
 const int LT_RED_PIN = A4;
@@ -150,12 +131,11 @@ int lt_grn_state = 0;
 int lt_yel_state = 0;
 int lt_blu_state = 0;
 
-// ESTOP
-const int ESTOP_OUT_PIN = A8;
-const int ESTOP_SIG_PIN = A9;
+//// ESTOP
+//const int ESTOP_OUT_PIN = A8;
+//const int ESTOP_SIG_PIN = A9;
 
 // VARS -------------------------------------------------------------
-const int THRO_RESISTANCE = LAPX9C10X_X9C104;
 const int throttleMax = 100;
 int m_signal = 0;
 bool debug = true;
@@ -166,10 +146,6 @@ unsigned long last_time = 0;
 
 // DEVICES ----------------------------------------------------------
 // MOTORS
-Motor motor_a(A_THRO_INC_PIN, A_THRO_UD_PIN, A_THRO_CS_PIN, A_THRO_RESISTANCE, A_DIR_SEL0_PIN, A_DIR_SEL1_PIN);
-Motor motor_b(B_THRO_INC_PIN, B_THRO_UD_PIN, B_THRO_CS_PIN, B_THRO_RESISTANCE, B_DIR_SEL0_PIN, B_DIR_SEL1_PIN);
-Motor motor_c(C_THRO_INC_PIN, C_THRO_UD_PIN, C_THRO_CS_PIN, C_THRO_RESISTANCE, C_DIR_SEL0_PIN, C_DIR_SEL1_PIN);
-Motor motor_d(D_THRO_INC_PIN, D_THRO_UD_PIN, D_THRO_CS_PIN, D_THRO_RESISTANCE, D_DIR_SEL0_PIN, D_DIR_SEL1_PIN);
 
 // RC INPUTS
 ServoInputPin<ORX_AUX1_PIN> orxAux1; // 3 states - Manual / Paused / Autonomous
@@ -194,11 +170,15 @@ int rc_cmd_a;
 int rc_cmd_b;
 int rc_cmd_c;
 int rc_cmd_d;
+int rc_cmd_e;
+int rc_cmd_f;
 
 int ros_cmd_a;
 int ros_cmd_b;
 int ros_cmd_c;
 int ros_cmd_d;
+int ros_cmd_e;
+int ros_cmd_f;
 
 // FUNCTIONS --------------------------------------------------------
 
@@ -217,11 +197,24 @@ void read_rc() {
 
 // Translate RC input to 4x holonomic motor system
 // A - Port Aft, D - Starboard Aft, C - Starboard Fore, B - Port Fore
-void set_motor_4x() {
+void set_motor_4x_holo() {
   int a = (cmd_srg + cmd_swy - cmd_yaw);
   int b = (cmd_srg - cmd_swy - cmd_yaw);
   int c = (cmd_srg + cmd_swy + cmd_yaw);
   int d = (cmd_srg - cmd_swy + cmd_yaw);
+  float max_val = max(100, max(max(abs(a), abs(b)), max(abs(c), abs(d)))) / 100.0;
+  rc_cmd_a = a / max_val;
+  rc_cmd_b = b / max_val;
+  rc_cmd_c = c / max_val;
+  rc_cmd_d = d / max_val;
+}
+
+void set_motor_4x_tank() {
+  int a = cmd_srg;
+  int d = cmd_srg;
+  int b = cmd_srg;
+  int c = cmd_srg;
+  
   float max_val = max(100, max(max(abs(a), abs(b)), max(abs(c), abs(d)))) / 100.0;
   rc_cmd_a = a / max_val;
   rc_cmd_b = b / max_val;
@@ -238,6 +231,30 @@ void set_motor_2x() {
   rc_cmd_b = 0;
   rc_cmd_c = 0;
   rc_cmd_d = d / max_val;
+}
+
+// C - Port Fore      D - Starboard Fore
+// B - Port Center    E - Starboard Center
+// A - Port Aft       F - Starboard Aft
+void set_motor_6x() {
+  int a = cmd_srg - cmd_yaw;
+  int b = -cmd_swy;
+  int c = cmd_srg - cmd_yaw;
+  int d = cmd_srg + cmd_yaw;
+  int e = cmd_swy;
+  int f = cmd_srg + cmd_yaw;
+  
+  
+  float max_val = max(100, 
+    max(max(max(abs(a), abs(b)), max(abs(c), abs(d))), max(abs(e), abs(f)))
+  ) / 100.0;
+
+  rc_cmd_a = a / max_val;
+  rc_cmd_b = b / max_val;
+  rc_cmd_c = c / max_val;
+  rc_cmd_d = d / max_val;
+  rc_cmd_e = e / max_val;
+  rc_cmd_f = f / max_val;
 }
 
 template<uint8_t bs>
@@ -285,15 +302,15 @@ void center_rc() {
 }
 
 // ESTOP MONITOR
-void setup_estop() {
-  pinMode(ESTOP_OUT_PIN, OUTPUT);
-  pinMode(ESTOP_SIG_PIN, INPUT_PULLUP);
-  digitalWrite(ESTOP_OUT_PIN, LOW);
-}
-
-void read_estop() {
-  estop_state = digitalRead(ESTOP_SIG_PIN);
-}
+//void setup_estop() {
+//  pinMode(ESTOP_OUT_PIN, OUTPUT);
+//  pinMode(ESTOP_SIG_PIN, INPUT_PULLUP);
+//  digitalWrite(ESTOP_OUT_PIN, LOW);
+//}
+//
+//void read_estop() {
+//  estop_state = digitalRead(ESTOP_SIG_PIN);
+//}
 
 
 // LIGHT TOWER VARS AND FUNCTIONS
@@ -358,6 +375,8 @@ rcl_subscription_t motor_a_sub; // A (left_rear)
 rcl_subscription_t motor_b_sub; //Nick Code  :C // B (left_front)
 rcl_subscription_t motor_c_sub; // C (right_front)
 rcl_subscription_t motor_d_sub; // D (right_rear)
+rcl_subscription_t motor_e_sub; // E
+rcl_subscription_t motor_f_sub; // F
 
 rclc_executor_t executor;
 std_msgs__msg__Int32 msg;
@@ -365,6 +384,8 @@ std_msgs__msg__Int32 msg_a;
 std_msgs__msg__Int32 msg_b;
 std_msgs__msg__Int32 msg_c;
 std_msgs__msg__Int32 msg_d;
+std_msgs__msg__Int32 msg_e;
+std_msgs__msg__Int32 msg_f;
 
 rcl_allocator_t allocator;
 rclc_support_t support;
@@ -394,11 +415,18 @@ void left_rear_callback(const void * msgin)
 //  Serial.println(ros_left_rear_thrust);
 }
 
-void left_front_callback(const void * msgin) 
+void left_middle_callback(const void * msgin)
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
   ros_cmd_b = val * 100;
+}
+
+void left_front_callback(const void * msgin) 
+{
+  const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
+  float val = msg->data;
+  ros_cmd_c = val * 100;
 //  Serial.print("ros_left_front_thrust: ");
 //  Serial.println(ros_left_front_thrust);
 }
@@ -407,16 +435,23 @@ void right_front_callback(const void * msgin)
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
-  ros_cmd_c = val * 100;
+  ros_cmd_d = val * 100;
 //  Serial.print("ros_right_front_thrust: ");
 //  Serial.println(ros_right_front_thrust);
+}
+
+void right_middle_callback(const void * msgin)
+{
+  const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
+  float val = msg->data;
+  ros_cmd_e = val * 100;
 }
 
 void right_rear_callback(const void * msgin) 
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
-  ros_cmd_d = val * 100;
+  ros_cmd_f = val * 100;
 //  Serial.print("ros_right_rear_thrust: ");
 //  Serial.println(ros_right_rear_thrust);
 }
@@ -474,25 +509,39 @@ bool ros_create_entities() {
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
     "/wamv/thrusters/right_rear_thrust_cmd"));
+  RCCHECK(rclc_subscription_init_default(
+    &motor_e_sub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+    "/wamv/thrusters/right_rear_thrust_cmd"));
+  RCCHECK(rclc_subscription_init_default(
+    &motor_f_sub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+    "/wamv/thrusters/right_rear_thrust_cmd"));
    
   // create timer,
   // const unsigned int timer_timeout = 1000;
 
   // create executor
-  RCCHECK(rclc_executor_init(&executor, &support.context, 4, &allocator)); // Increment this for more subs
+  RCCHECK(rclc_executor_init(&executor, &support.context, 6, &allocator)); // Increment this for more subs
   // RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg0, &vehicle_state_callback, ON_NEW_DATA));
 
   //Nick Code :-l
   RCCHECK(rclc_executor_add_subscription(&executor, &motor_a_sub, &msg_a, &left_rear_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor, &motor_b_sub, &msg_b, &left_front_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor, &motor_c_sub, &msg_c, &right_front_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor, &motor_d_sub, &msg_d, &right_rear_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &motor_b_sub, &msg_b, &left_middle_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &motor_c_sub, &msg_c, &left_front_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &motor_d_sub, &msg_d, &right_front_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &motor_e_sub, &msg_e, &right_middle_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &motor_f_sub, &msg_f, &right_rear_callback, ON_NEW_DATA));
   
   msg.data = 0;
   msg_a.data = 0;
   msg_b.data = 0;
   msg_c.data = 0;
   msg_d.data = 0;
+  msg_e.data = 0;
+  msg_f.data = 0;
   return true;
 }
 
@@ -505,6 +554,8 @@ void ros_destroy_entities() {
   rcl_subscription_fini(&motor_b_sub, &node);
   rcl_subscription_fini(&motor_c_sub, &node);
   rcl_subscription_fini(&motor_d_sub, &node);
+  rcl_subscription_fini(&motor_e_sub, &node);
+  rcl_subscription_fini(&motor_f_sub, &node);
   rclc_executor_fini(&executor);
   rcl_node_fini(&node);
   rclc_support_fini(&support);
@@ -512,63 +563,66 @@ void ros_destroy_entities() {
 
 void exec_mode(int mode, bool killed) {
   // Publish Vehicle State
-  std_msgs__msg__Int32 msg_x;
-  //msg_x.data = mode;
-  msg_x.data = ros_cmd_b;
+//  std_msgs__msg__Int32 msg_x;
+//  //msg_x.data = mode;
+//  msg_x.data = ros_cmd_b;
   
   // Vehicle Logic
   if (killed) {
     // TODO: Listen for killed on actual E-stop circuit in case of manual shutoff
     // TODO: Add a time delay before resuming from killed state with blink
     cfg_lt(1, 0, 0, 0);
-    motor_a.setThrottle(0);
-    motor_b.setThrottle(0);
-    motor_c.setThrottle(0);
-    motor_d.setThrottle(0);
-    msg_x.data = 3;
   }
   else {
-    motor_a.resetThrottle();
-    motor_b.resetThrottle();
-    motor_c.resetThrottle();
-    motor_d.resetThrottle();
     if (mode == 0){ // AUTONOMOUS
       ros_handler();
-      motor_a.setThrottle(eToK(ros_cmd_a));
-      motor_b.setThrottle(eToK(ros_cmd_b));
-      motor_c.setThrottle(eToK(ros_cmd_c));
-      motor_d.setThrottle(eToK(ros_cmd_d));
-      msg_x.data = 2;
+//      motor_a.setThrottle(eToK(ros_cmd_a));
+//      motor_b.setThrottle(eToK(ros_cmd_b));
+//      motor_c.setThrottle(eToK(ros_cmd_c));
+//      motor_d.setThrottle(eToK(ros_cmd_d));
+      ros_cmd_a = ros_cmd_a*4 + 1500;
+      ros_cmd_b = ros_cmd_b*4 + 1500;
+      ros_cmd_c = ros_cmd_c*4 + 1500;
+      ros_cmd_d = ros_cmd_d*4 + 1500;
+      ros_cmd_e = ros_cmd_e*4 + 1500;
+      ros_cmd_f = ros_cmd_f*4 + 1500;
+      motor_a.writeMicroseconds(ros_cmd_a);
+      motor_b.writeMicroseconds(ros_cmd_b);
+      motor_c.writeMicroseconds(ros_cmd_c);
+      motor_d.writeMicroseconds(ros_cmd_d);
+      motor_e.writeMicroseconds(ros_cmd_e);
+      motor_f.writeMicroseconds(ros_cmd_f);
+//      msg_x.data = 2;
     }
     else if (mode == 1) { // CALIBRATION
       calibrate_rc();
       cfg_lt(0, 2, 0, 0);
-      motor_a.setThrottle(0);
-      motor_b.setThrottle(0);
-      motor_c.setThrottle(0);
-      motor_d.setThrottle(0);
-      msg_x.data = 1;
     }
     else if (mode == 2) { // REMOTE CONTROL
-      set_motor_4x();
+      set_motor_6x();
       cfg_lt(0, 1, 0, 0);
-//      char buffer[100];
-//       sprintf(buffer, "Manual | A: %4i  B: %4i  C: %4i D: %4i", 
-//      rc_cmd_a, rc_cmd_b, rc_cmd_c, rc_cmd_d);
-//      Serial.println(buffer);
-      motor_a.setThrottle(eToK(rc_cmd_a));
-      motor_b.setThrottle(eToK(rc_cmd_b));
-      motor_c.setThrottle(eToK(rc_cmd_c));
-      motor_d.setThrottle(eToK(rc_cmd_d));
-      msg_x.data = 1;
+      rc_cmd_a = rc_cmd_a*4 + 1500;
+      rc_cmd_b = rc_cmd_b*4 + 1500;
+      rc_cmd_c = rc_cmd_c*4 + 1500;
+      rc_cmd_d = rc_cmd_d*4 + 1500;
+      rc_cmd_e = rc_cmd_e*4 + 1500;
+      rc_cmd_f = rc_cmd_f*4 + 1500;
+      Serial.println("Throttle set");
+      motor_a.writeMicroseconds(rc_cmd_a); // Send signal to ESC.
+      motor_b.writeMicroseconds(rc_cmd_b); // Send signal to ESC.
+      motor_c.writeMicroseconds(rc_cmd_c); // Send signal to ESC.
+      motor_d.writeMicroseconds(rc_cmd_d); // Send signal to ESC.
+      motor_e.writeMicroseconds(rc_cmd_e);
+      motor_f.writeMicroseconds(rc_cmd_f);
+//      Serial.println(String(rc_cmd_d));
     }
     else {
       Serial.println("Error, mode not supported");
     }
   }
-  if (state == AGENT_CONNECTED) {
-    RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg_x, NULL));
-  }
+//  if (state == AGENT_CONNECTED) {
+//    RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg_x, NULL));
+//  }
 }
 
 void setup() {
@@ -578,18 +632,18 @@ void setup() {
   delay(100);
   Serial.println("NOVA MOTOR STARTING...");
   Serial.println("SETTING UP LIGHT TOWER...");
-  setup_estop();
-  setup_lt();
+//  setup_estop();
+//  setup_lt();
 
   Serial.println("INITIALIZING MOTOR CONTROLLERS...");
-  motor_a.init();
-  motor_b.init();
-  motor_c.init();
-  motor_d.init();
-  motor_a.setThrottle(0);
-  motor_b.setThrottle(0);
-  motor_c.setThrottle(0);
-  motor_d.setThrottle(0);
+//  motor_a.init();
+//  motor_b.init();
+//  motor_c.init();
+//  motor_d.init();
+//  motor_a.setThrottle(0);
+//  motor_b.setThrottle(0);
+//  motor_c.setThrottle(0);
+//  motor_d.setThrottle(0);
 
   Serial.println("CALIBRATING CONTROLLER...");
   bool mode_ready = false;
@@ -623,16 +677,20 @@ void setup() {
 }
 
 void zero_all_motors() {
-  motor_a.setThrottle(0);
-  motor_b.setThrottle(0);
-  motor_c.setThrottle(0);
-  motor_d.setThrottle(0);
+  motor_a.writeMicroseconds(1500);
+  motor_b.writeMicroseconds(1500);
+  motor_c.writeMicroseconds(1500);
+  motor_d.writeMicroseconds(1500);
+  motor_e.writeMicroseconds(1500);
+  motor_f.writeMicroseconds(1500);
 }
 void zero_ros_cmds() {
   ros_cmd_a = 0;
   ros_cmd_b = 0;
   ros_cmd_c = 0;
   ros_cmd_d = 0;
+  ros_cmd_e = 0;
+  ros_cmd_f = 0;
 }
 
 
@@ -681,11 +739,11 @@ void loop() {
   // Get loop time
   loop_time = millis();
   // E-Stop
-  read_estop();
+//  read_estop();
   // Polling R/C commands
   read_rc();
   // Execute based on mode
-  boat_killed = estop_state;
+  boat_killed = false;
   exec_mode(cmd_ctr, boat_killed);
   // Update light tower
   if (estop_state == true) {
