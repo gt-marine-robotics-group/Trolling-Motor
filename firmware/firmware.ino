@@ -98,9 +98,9 @@ const int ORX_ELEV_PIN = 49; // WAM-V translate forward / backward
 const int ORX_AILE_PIN = 51; // WAM-V translate left / right
 const int ORX_THRO_PIN = 53;
 
-// OG: A: left rear, B: left front, C: right front, D: right rear
-// New: A: right rear, B: right front, C: left front, D: left rear
-
+// C - Port Fore      D - Starboard Fore
+// B - Port Center    E - Starboard Center
+// A - Port Aft       F - Starboard Aft
 // MOTOR ALFA
 const int A_SIG_PIN = 8;
 Servo motor_a;
@@ -406,11 +406,13 @@ void vehicle_state_publish(int vehicle_state)
 
 //Nick Code :^(
 
+float limit_coefficient = .1;
+
 void left_rear_callback(const void * msgin) 
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
-  ros_cmd_a = val * 100;
+  ros_cmd_a = val * 100 * limit_coefficient;
 //  Serial.print("ros_left_rear_thrust: ");
 //  Serial.println(ros_left_rear_thrust);
 }
@@ -419,14 +421,15 @@ void left_middle_callback(const void * msgin)
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
-  ros_cmd_b = val * 100;
+  ros_cmd_b = val * 100 * limit_coefficient;
+  ros_cmd_e = -1 * val * 100 * limit_coefficient;
 }
 
 void left_front_callback(const void * msgin) 
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
-  ros_cmd_c = val * 100;
+  ros_cmd_c = val * 100 * limit_coefficient;
 //  Serial.print("ros_left_front_thrust: ");
 //  Serial.println(ros_left_front_thrust);
 }
@@ -435,23 +438,23 @@ void right_front_callback(const void * msgin)
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
-  ros_cmd_d = val * 100;
+  ros_cmd_d = val * 100 * limit_coefficient;
 //  Serial.print("ros_right_front_thrust: ");
 //  Serial.println(ros_right_front_thrust);
 }
 
-void right_middle_callback(const void * msgin)
-{
-  const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
-  float val = msg->data;
-  ros_cmd_e = val * 100;
-}
+//void right_middle_callback(const void * msgin)
+//{
+//  const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
+//  float val = msg->data;
+//  ros_cmd_e = val * 100 * limit_coefficient;
+//}
 
 void right_rear_callback(const void * msgin) 
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
-  ros_cmd_f = val * 100;
+  ros_cmd_f = val * 100 * limit_coefficient;
 //  Serial.print("ros_right_rear_thrust: ");
 //  Serial.println(ros_right_rear_thrust);
 }
@@ -469,12 +472,12 @@ bool ros_create_entities() {
   rcl_node_options_t node_ops = rcl_node_get_default_options();
   node_ops.domain_id = (size_t)(12);
   RCCHECK(rclc_node_init_with_options(&node, "micro_ros_arduino_node", "", &support, &node_ops));
-  // create publisher
-  RCCHECK(rclc_publisher_init_default(
-    &vehicle_state_pub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "/wamv/nova/mode"));
+//  // create publisher
+//  RCCHECK(rclc_publisher_init_default(
+//    &vehicle_state_pub,
+//    &node,
+//    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+//    "/wamv/nova/mode"));
   
   // create subscriber
 //  RCCHECK(rclc_subscription_init_default(
@@ -487,33 +490,30 @@ bool ros_create_entities() {
 
   // create thrust subscribers
   RCCHECK(rclc_subscription_init_default(
-    &motor_b_sub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-    "/wamv/thrusters/left_front_thrust_cmd"));
-
-  RCCHECK(rclc_subscription_init_default(
-    &motor_c_sub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-    "/wamv/thrusters/right_front_thrust_cmd"));
-
-  RCCHECK(rclc_subscription_init_default(
     &motor_a_sub,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
     "/wamv/thrusters/left_rear_thrust_cmd"));
-
+  RCCHECK(rclc_subscription_init_default(
+    &motor_b_sub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+    "/wamv/thrusters/left_middle_thrust_cmd"));
+  RCCHECK(rclc_subscription_init_default(
+    &motor_c_sub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+    "/wamv/thrusters/left_front_thrust_cmd"));
   RCCHECK(rclc_subscription_init_default(
     &motor_d_sub,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-    "/wamv/thrusters/right_rear_thrust_cmd"));
-  RCCHECK(rclc_subscription_init_default(
-    &motor_e_sub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-    "/wamv/thrusters/right_rear_thrust_cmd"));
+    "/wamv/thrusters/right_front_thrust_cmd"));
+//  RCCHECK(rclc_subscription_init_default(
+//    &motor_e_sub,
+//    &node,
+//    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+//    "/wamv/thrusters/right_middle_thrust_cmd"));
   RCCHECK(rclc_subscription_init_default(
     &motor_f_sub,
     &node,
@@ -527,12 +527,11 @@ bool ros_create_entities() {
   RCCHECK(rclc_executor_init(&executor, &support.context, 6, &allocator)); // Increment this for more subs
   // RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg0, &vehicle_state_callback, ON_NEW_DATA));
 
-  //Nick Code :-l
   RCCHECK(rclc_executor_add_subscription(&executor, &motor_a_sub, &msg_a, &left_rear_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &motor_b_sub, &msg_b, &left_middle_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &motor_c_sub, &msg_c, &left_front_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &motor_d_sub, &msg_d, &right_front_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor, &motor_e_sub, &msg_e, &right_middle_callback, ON_NEW_DATA));
+//  RCCHECK(rclc_executor_add_subscription(&executor, &motor_e_sub, &msg_e, &right_middle_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &motor_f_sub, &msg_f, &right_rear_callback, ON_NEW_DATA));
   
   msg.data = 0;
@@ -592,6 +591,7 @@ void exec_mode(int mode, bool killed) {
       motor_d.writeMicroseconds(ros_cmd_d);
       motor_e.writeMicroseconds(ros_cmd_e);
       motor_f.writeMicroseconds(ros_cmd_f);
+      delay(20);
 //      msg_x.data = 2;
     }
     else if (mode == 1) { // CALIBRATION
@@ -665,7 +665,26 @@ void setup() {
       calibration_zero_check = 0;
     }
   }
-  
+
+  Serial.println("MOTOR SETUP");
+  motor_a.attach(A_SIG_PIN);
+  motor_b.attach(B_SIG_PIN);
+  motor_c.attach(C_SIG_PIN);
+  motor_d.attach(D_SIG_PIN);
+  motor_e.attach(E_SIG_PIN);
+  motor_f.attach(F_SIG_PIN);
+  motor_a.writeMicroseconds(1500);
+//  delay(7000);
+  motor_b.writeMicroseconds(1500);
+//  delay(7000);
+  motor_c.writeMicroseconds(1500);
+//  delay(7000);
+  motor_d.writeMicroseconds(1500);
+  motor_e.writeMicroseconds(1500);
+  motor_f.writeMicroseconds(1500);
+  delay(7000);
+
+  Serial.println("============= CALIBRATION COMPLETE ===============");
   delay(500);
   set_microros_transports();
   
