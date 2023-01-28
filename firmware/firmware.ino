@@ -406,7 +406,7 @@ void vehicle_state_publish(int vehicle_state)
 
 //Nick Code :^(
 
-float limit_coefficient = .1;
+float limit_coefficient = .9;
 
 void left_rear_callback(const void * msgin) 
 {
@@ -575,22 +575,12 @@ void exec_mode(int mode, bool killed) {
   else {
     if (mode == 0){ // AUTONOMOUS
       ros_handler();
-//      motor_a.setThrottle(eToK(ros_cmd_a));
-//      motor_b.setThrottle(eToK(ros_cmd_b));
-//      motor_c.setThrottle(eToK(ros_cmd_c));
-//      motor_d.setThrottle(eToK(ros_cmd_d));
-      ros_cmd_a = ros_cmd_a*4 + 1500;
-      ros_cmd_b = ros_cmd_b*4 + 1500;
-      ros_cmd_c = ros_cmd_c*4 + 1500;
-      ros_cmd_d = ros_cmd_d*4 + 1500;
-      ros_cmd_e = ros_cmd_e*4 + 1500;
-      ros_cmd_f = ros_cmd_f*4 + 1500;
-      motor_a.writeMicroseconds(ros_cmd_a);
-      motor_b.writeMicroseconds(ros_cmd_b);
-      motor_c.writeMicroseconds(ros_cmd_c);
-      motor_d.writeMicroseconds(ros_cmd_d);
-      motor_e.writeMicroseconds(ros_cmd_e);
-      motor_f.writeMicroseconds(ros_cmd_f);
+      motor_a.writeMicroseconds(ros_cmd_a*4 + 1500);
+      motor_b.writeMicroseconds(ros_cmd_b*4 + 1500);
+      motor_c.writeMicroseconds(ros_cmd_c*4 + 1500);
+      motor_d.writeMicroseconds(ros_cmd_d*4 + 1500);
+      motor_e.writeMicroseconds(ros_cmd_e*4 + 1500);
+      motor_f.writeMicroseconds(ros_cmd_f*4 + 1500);
       delay(20);
 //      msg_x.data = 2;
     }
@@ -601,19 +591,14 @@ void exec_mode(int mode, bool killed) {
     else if (mode == 2) { // REMOTE CONTROL
       set_motor_6x();
       cfg_lt(0, 1, 0, 0);
-      rc_cmd_a = rc_cmd_a*4 + 1500;
-      rc_cmd_b = rc_cmd_b*4 + 1500;
-      rc_cmd_c = rc_cmd_c*4 + 1500;
-      rc_cmd_d = rc_cmd_d*4 + 1500;
-      rc_cmd_e = rc_cmd_e*4 + 1500;
       rc_cmd_f = rc_cmd_f*4 + 1500;
       Serial.println("Throttle set");
-      motor_a.writeMicroseconds(rc_cmd_a); // Send signal to ESC.
-      motor_b.writeMicroseconds(rc_cmd_b); // Send signal to ESC.
-      motor_c.writeMicroseconds(rc_cmd_c); // Send signal to ESC.
-      motor_d.writeMicroseconds(rc_cmd_d); // Send signal to ESC.
-      motor_e.writeMicroseconds(rc_cmd_e);
-      motor_f.writeMicroseconds(rc_cmd_f);
+      motor_a.writeMicroseconds(rc_cmd_a*4 + 1500); // Send signal to ESC.
+      motor_b.writeMicroseconds(rc_cmd_b*4 + 1500); // Send signal to ESC.
+      motor_c.writeMicroseconds(rc_cmd_c*4 + 1500); // Send signal to ESC.
+      motor_d.writeMicroseconds(rc_cmd_d*4 + 1500); // Send signal to ESC.
+      motor_e.writeMicroseconds(rc_cmd_e*4 + 1500);
+      motor_f.writeMicroseconds(rc_cmd_f*4 + 1500);
 //      Serial.println(String(rc_cmd_d));
     }
     else {
