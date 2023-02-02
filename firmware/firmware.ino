@@ -117,7 +117,7 @@ Servo motor_d;
 const int E_SIG_PIN = 12;
 Servo motor_e;
 // MOTOR FOXTROT
-const int F_SIG_PIN = 13;
+const int F_SIG_PIN = 7;
 Servo motor_f;
 
 
@@ -591,7 +591,6 @@ void exec_mode(int mode, bool killed) {
     else if (mode == 2) { // REMOTE CONTROL
       set_motor_6x();
       cfg_lt(0, 1, 0, 0);
-      rc_cmd_f = rc_cmd_f*4 + 1500;
       Serial.println("Throttle set");
       motor_a.writeMicroseconds(rc_cmd_a*4 + 1500); // Send signal to ESC.
       motor_b.writeMicroseconds(rc_cmd_b*4 + 1500); // Send signal to ESC.
