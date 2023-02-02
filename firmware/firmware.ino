@@ -367,7 +367,7 @@ void cfg_lt(int r, int y, int g, int b){
 
 //https://github.com/micro-ROS/micro_ros_arduino/blob/humble/examples/micro-ros_publisher/micro-ros_publisher.ino
 //https://github.com/micro-ROS/micro_ros_arduino/blob/humble/examples/micro-ros_subscriber/micro-ros_subscriber.ino
-rcl_publisher_t vehicle_state_pub;
+//rcl_publisher_t vehicle_state_pub;
 //rcl_subscription_t subscriber;
 // OG: A: left rear, B: left front, C: right front, D: right rear
 // New: A: right rear, B: right front, C: left front, D: left rear
@@ -397,22 +397,22 @@ rcl_timer_t timer;
 //  const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
 //  RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg, NULL));
 //}
-std_msgs__msg__Int32 state_msg;
-void vehicle_state_publish(int vehicle_state)
-{
-  state_msg.data = vehicle_state;
-  RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg, NULL));
-}
+std_msgs__msg__Float32 state_msg;
+//void vehicle_state_publish(float vehicle_state)
+//{
+//  state_msg.data = vehicle_state;
+//  RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg, NULL));
+//}
 
 //Nick Code :^(
 
-float limit_coefficient = .9;
+float limit_coefficient = -1 * .9;
 
 void left_rear_callback(const void * msgin) 
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
-  ros_cmd_a = val * 100 * limit_coefficient;
+  ros_cmd_a = int(val * 100 * limit_coefficient);
 //  Serial.print("ros_left_rear_thrust: ");
 //  Serial.println(ros_left_rear_thrust);
 }
@@ -421,7 +421,7 @@ void left_middle_callback(const void * msgin)
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
-  ros_cmd_b = val * 100 * limit_coefficient;
+  ros_cmd_b = 1 * val * 100 * limit_coefficient;
   ros_cmd_e = -1 * val * 100 * limit_coefficient;
 }
 
@@ -472,13 +472,13 @@ bool ros_create_entities() {
   rcl_node_options_t node_ops = rcl_node_get_default_options();
   node_ops.domain_id = (size_t)(12);
   RCCHECK(rclc_node_init_with_options(&node, "micro_ros_arduino_node", "", &support, &node_ops));
-//  // create publisher
+  // create publisher
 //  RCCHECK(rclc_publisher_init_default(
 //    &vehicle_state_pub,
 //    &node,
-//    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+//    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
 //    "/wamv/nova/mode"));
-  
+//  
   // create subscriber
 //  RCCHECK(rclc_subscription_init_default(
 //    &subscriber,
@@ -548,7 +548,7 @@ void ros_destroy_entities() {
   rmw_context_t * rmw_context = rcl_context_get_rmw_context(&support.context);
   (void) rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
 
-  rcl_publisher_fini(&vehicle_state_pub, &node);
+  //rcl_publisher_fini(&vehicle_state_pub, &node);
   rcl_subscription_fini(&motor_a_sub, &node);
   rcl_subscription_fini(&motor_b_sub, &node);
   rcl_subscription_fini(&motor_c_sub, &node);
@@ -562,7 +562,7 @@ void ros_destroy_entities() {
 
 void exec_mode(int mode, bool killed) {
   // Publish Vehicle State
-//  std_msgs__msg__Int32 msg_x;
+  std_msgs__msg__Float32 msg_x;
 //  //msg_x.data = mode;
 //  msg_x.data = ros_cmd_b;
   
@@ -581,6 +581,7 @@ void exec_mode(int mode, bool killed) {
       motor_d.writeMicroseconds(ros_cmd_d*4 + 1500);
       motor_e.writeMicroseconds(ros_cmd_e*4 + 1500);
       motor_f.writeMicroseconds(ros_cmd_f*4 + 1500);
+      msg_x.data = ros_cmd_a;
       delay(20);
 //      msg_x.data = 2;
     }
@@ -604,9 +605,13 @@ void exec_mode(int mode, bool killed) {
       Serial.println("Error, mode not supported");
     }
   }
-//  if (state == AGENT_CONNECTED) {
-//    RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg_x, NULL));
-//  }
+///  set_motor_6x();
+
+//  m/sg_x.data = rc_cmd_a;
+
+//  if (/state == AGENT_CONNECTED) {
+//    RCSOF/TCHECK(rcl_publish(&vehicle_state_pub, &msg_x, NULL));
+//  }/
 }
 
 void setup() {
