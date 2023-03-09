@@ -559,6 +559,22 @@ void ros_destroy_entities() {
   rcl_node_fini(&node);
   rclc_support_fini(&support);
 }
+//max function
+int maxF(int throttle) {
+  if (throttle < -100) {
+    throttle = -100;
+  } else if (throttle > 100) {
+    throttle = 100;
+  }
+  return throttle;
+}
+
+int throttleToESC(int throttle) {
+  throttle = maxF(throttle);
+  throttle = throttle * 4 + 1500;
+  return throttle;
+}
+
 
 void exec_mode(int mode, bool killed) {
   // Publish Vehicle State
