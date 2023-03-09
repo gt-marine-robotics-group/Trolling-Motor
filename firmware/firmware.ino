@@ -1,4 +1,4 @@
-#include <LapX9C10X.h>
+// #include <LapX9C10X.h>
 #include <ServoInput.h>
 #include <Servo.h>
 
@@ -41,91 +41,91 @@ enum states {
   AGENT_DISCONNECTED
 } state;
 
-class Motor {
-  private:
-    int dirOnePin; // BWD
-    int dirTwoPin; //FWD
-    int throUdPin;
-    int throIncPin;
-    int throCsPin;
+// class Motor {
+//   private:
+//     int dirOnePin; // BWD
+//     int dirTwoPin; //FWD
+//     int throUdPin;
+//     int throIncPin;
+//     int throCsPin;
 
-    LapX9C10X *throttle;
+//     LapX9C10X *throttle;
 
-    void setDirection(int d) {
-      if (d == 0) { //OFF
-        digitalWrite(dirOnePin, LOW);
-        digitalWrite(dirTwoPin, LOW);
-      }
-      else if (d > 0) { //FWD
-        digitalWrite(dirOnePin, LOW);
-        digitalWrite(dirTwoPin, HIGH);
-      }
-      else if (d < 0) { //BWD
-        digitalWrite(dirOnePin, HIGH);
-        digitalWrite(dirTwoPin, LOW);
-      }
-    }
-  public:
-    Motor(uint8_t throIncPin, uint8_t throUdPin, uint8_t throCsPin, float throRes, int dirOnePin, int dirTwoPin) {
-      this->dirOnePin = dirOnePin;
-      this->dirTwoPin = dirTwoPin;
-      this->throUdPin = throUdPin;
-      this->throIncPin = throIncPin;
-      this->throCsPin = throCsPin;
-      throttle = new LapX9C10X(throIncPin, throUdPin, throCsPin, throRes);
-    }
-    void init() {
-      throttle->begin(); // Min resistance
-      pinMode(dirOnePin, OUTPUT);
-      pinMode(dirTwoPin, OUTPUT);
-    }
-    bool setThrottle(int throttleValue) { // In terms of resistance
-      setDirection(throttleValue);
-      throttle->set(float(abs(throttleValue)));
-      return true;
-    }
-    void resetThrottle() {
-      throttle->reset(0);
-    }
-};
+//     void setDirection(int d) {
+//       if (d == 0) { //OFF
+//         digitalWrite(dirOnePin, LOW);
+//         digitalWrite(dirTwoPin, LOW);
+//       }
+//       else if (d > 0) { //FWD
+//         digitalWrite(dirOnePin, LOW);
+//         digitalWrite(dirTwoPin, HIGH);
+//       }
+//       else if (d < 0) { //BWD
+//         digitalWrite(dirOnePin, HIGH);
+//         digitalWrite(dirTwoPin, LOW);
+//       }
+//     }
+//   public:
+//     Motor(uint8_t throIncPin, uint8_t throUdPin, uint8_t throCsPin, float throRes, int dirOnePin, int dirTwoPin) {
+//       this->dirOnePin = dirOnePin;
+//       this->dirTwoPin = dirTwoPin;
+//       this->throUdPin = throUdPin;
+//       this->throIncPin = throIncPin;
+//       this->throCsPin = throCsPin;
+//       // throttle = new LapX9C10X(throIncPin, throUdPin, throCsPin, throRes);
+//     }
+//     void init() {
+//       throttle->begin(); // Min resistance
+//       pinMode(dirOnePin, OUTPUT);
+//       pinMode(dirTwoPin, OUTPUT);
+//     }
+//     bool setThrottle(int throttleValue) { // In terms of resistance
+//       setDirection(throttleValue);
+//       throttle->set(float(abs(throttleValue)));
+//       return true;
+//     }
+//     void resetThrottle() {
+//       throttle->reset(0);
+//     }
+// };
 
 // PINS -------------------------------------------------------------
 // RC INPUT
-const int ORX_AUX1_PIN = 43; // checks if killed - need to figure out reset check
-const int ORX_GEAR_PIN = 45; // Kill switch
-const int ORX_RUDD_PIN = 47; // yaw
-const int ORX_ELEV_PIN = 49; // WAM-V translate forward / backward
-const int ORX_AILE_PIN = 51; // WAM-V translate left / right
-const int ORX_THRO_PIN = 53;
+const uint8_t ORX_AUX1_PIN = 2; // checks if killed - need to figure out reset check
+// const int ORX_GEAR_PIN = ; // Kill switch
+const uint8_t ORX_RUDD_PIN = 3; // yaw
+const uint8_t ORX_ELEV_PIN = 4; // WAM-V translate forward / backward
+const uint8_t ORX_AILE_PIN = 5; // WAM-V translate left / right
+const uint8_t ORX_THRO_PIN = 6;
 
 // C - Port Fore      D - Starboard Fore
 // B - Port Center    E - Starboard Center
 // A - Port Aft       F - Starboard Aft
 // MOTOR ALFA
-const int A_SIG_PIN = 8;
+const int A_SIG_PIN = 36;
 Servo motor_a;
 // MOTOR BRAVO
-const int B_SIG_PIN = 9;
+const int B_SIG_PIN = 37;
 Servo motor_b;
 // MOTOR CHARLIE
-const int C_SIG_PIN = 10;
+const int C_SIG_PIN = 38;
 Servo motor_c;
 // MOTOR DELTA
-const int D_SIG_PIN = 11;
+const int D_SIG_PIN = 35;
 Servo motor_d;
 // MOTOR ECHO
-const int E_SIG_PIN = 12;
+const int E_SIG_PIN = 34;
 Servo motor_e;
 // MOTOR FOXTROT
-const int F_SIG_PIN = 7;
+const int F_SIG_PIN = 33;
 Servo motor_f;
 
 
 // LIGHT TOWER
-const int LT_RED_PIN = A4;
-const int LT_GRN_PIN = A3;
-const int LT_YEL_PIN = A5;
-const int LT_BLU_PIN = A6;
+const int LT_RED_PIN = 27;
+const int LT_GRN_PIN = 25;
+const int LT_YEL_PIN = 26;
+const int LT_BLU_PIN = 24;
 int lt_red_state = 0;
 int lt_grn_state = 0;
 int lt_yel_state = 0;
@@ -149,7 +149,7 @@ unsigned long last_time = 0;
 
 // RC INPUTS
 ServoInputPin<ORX_AUX1_PIN> orxAux1; // 3 states - Manual / Paused / Autonomous
-ServoInputPin<ORX_GEAR_PIN> orxGear; // 2 states
+// ServoInputPin<ORX_GEAR_PIN> orxGear; // 2 states
 ServoInputPin<ORX_RUDD_PIN> orxRudd; // Continuous
 ServoInputPin<ORX_ELEV_PIN> orxElev; // Continuous
 ServoInputPin<ORX_AILE_PIN> orxAile; // Continuous
@@ -188,7 +188,7 @@ void read_rc() {
   cmd_swy = orxAile.mapDeadzone(-100, 101, 0.05);
   cmd_yaw = orxRudd.mapDeadzone(-100, 101, 0.05);
   cmd_ctr = orxAux1.map(0, 3);
-  cmd_kil = orxGear.map(1, 0);
+  cmd_kil = 0;//orxGear.map(1, 0);
   char buffer[100];
   sprintf(buffer, "RC | SRG: %4i  SWY: %4i  YAW: %4i CTR: %1i KIL: %1i", 
     cmd_srg, cmd_swy, cmd_yaw, cmd_ctr, cmd_kil);
