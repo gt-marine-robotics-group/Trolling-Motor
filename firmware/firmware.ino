@@ -1,3 +1,5 @@
+#include <motors_6.h>
+
 #include <LapX9C10X.h>
 #include <ServoInput.h>
 #include <Servo.h>
@@ -41,53 +43,7 @@ enum states {
   AGENT_DISCONNECTED
 } state;
 
-class Motor {
-  private:
-    int dirOnePin; // BWD
-    int dirTwoPin; //FWD
-    int throUdPin;
-    int throIncPin;
-    int throCsPin;
-
-    LapX9C10X *throttle;
-
-    void setDirection(int d) {
-      if (d == 0) { //OFF
-        digitalWrite(dirOnePin, LOW);
-        digitalWrite(dirTwoPin, LOW);
-      }
-      else if (d > 0) { //FWD
-        digitalWrite(dirOnePin, LOW);
-        digitalWrite(dirTwoPin, HIGH);
-      }
-      else if (d < 0) { //BWD
-        digitalWrite(dirOnePin, HIGH);
-        digitalWrite(dirTwoPin, LOW);
-      }
-    }
-  public:
-    Motor(uint8_t throIncPin, uint8_t throUdPin, uint8_t throCsPin, float throRes, int dirOnePin, int dirTwoPin) {
-      this->dirOnePin = dirOnePin;
-      this->dirTwoPin = dirTwoPin;
-      this->throUdPin = throUdPin;
-      this->throIncPin = throIncPin;
-      this->throCsPin = throCsPin;
-      throttle = new LapX9C10X(throIncPin, throUdPin, throCsPin, throRes);
-    }
-    void init() {
-      throttle->begin(); // Min resistance
-      pinMode(dirOnePin, OUTPUT);
-      pinMode(dirTwoPin, OUTPUT);
-    }
-    bool setThrottle(int throttleValue) { // In terms of resistance
-      setDirection(throttleValue);
-      throttle->set(float(abs(throttleValue)));
-      return true;
-    }
-    void resetThrottle() {
-      throttle->reset(0);
-    }
-};
+Motor6 motors{};
 
 // PINS -------------------------------------------------------------
 // RC INPUT
@@ -97,29 +53,6 @@ const int ORX_RUDD_PIN = 47; // yaw
 const int ORX_ELEV_PIN = 49; // WAM-V translate forward / backward
 const int ORX_AILE_PIN = 51; // WAM-V translate left / right
 const int ORX_THRO_PIN = 53;
-
-// C - Port Fore      D - Starboard Fore
-// B - Port Center    E - Starboard Center
-// A - Port Aft       F - Starboard Aft
-// MOTOR ALFA
-const int A_SIG_PIN = 8;
-Servo motor_a;
-// MOTOR BRAVO
-const int B_SIG_PIN = 9;
-Servo motor_b;
-// MOTOR CHARLIE
-const int C_SIG_PIN = 10;
-Servo motor_c;
-// MOTOR DELTA
-const int D_SIG_PIN = 11;
-Servo motor_d;
-// MOTOR ECHO
-const int E_SIG_PIN = 12;
-Servo motor_e;
-// MOTOR FOXTROT
-const int F_SIG_PIN = 7;
-Servo motor_f;
-
 
 // LIGHT TOWER
 const int LT_RED_PIN = A4;
@@ -656,21 +589,7 @@ void setup() {
   }
 
   Serial.println("MOTOR SETUP");
-  motor_a.attach(A_SIG_PIN);
-  motor_b.attach(B_SIG_PIN);
-  motor_c.attach(C_SIG_PIN);
-  motor_d.attach(D_SIG_PIN);
-  motor_e.attach(E_SIG_PIN);
-  motor_f.attach(F_SIG_PIN);
-  motor_a.writeMicroseconds(1500);
-//  delay(7000);
-  motor_b.writeMicroseconds(1500);
-//  delay(7000);
-  motor_c.writeMicroseconds(1500);
-//  delay(7000);
-  motor_d.writeMicroseconds(1500);
-  motor_e.writeMicroseconds(1500);
-  motor_f.writeMicroseconds(1500);
+  motors.motors_setup(Motor6::default_pins);
   delay(7000);
 
   Serial.println("============= CALIBRATION COMPLETE ===============");
@@ -684,14 +603,6 @@ void setup() {
   Serial.println("==================================================");
 }
 
-void zero_all_motors() {
-  motor_a.writeMicroseconds(1500);
-  motor_b.writeMicroseconds(1500);
-  motor_c.writeMicroseconds(1500);
-  motor_d.writeMicroseconds(1500);
-  motor_e.writeMicroseconds(1500);
-  motor_f.writeMicroseconds(1500);
-}
 void zero_ros_cmds() {
   ros_cmd_a = 0;
   ros_cmd_b = 0;
@@ -708,14 +619,14 @@ void ros_handler() {
     case WAITING_AGENT:
       cfg_lt(0, 0, 3, 0);
       zero_ros_cmds();
-      zero_all_motors();
+      motors.zero_all_motors();
       EXECUTE_EVERY_N_MS(2000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;);
       
       break;
     case AGENT_AVAILABLE:
       cfg_lt(0, 0, 2, 0);
       zero_ros_cmds();
-      zero_all_motors();
+      motors.zero_all_motors();
       created = ros_create_entities();
       state = (true == created) ? AGENT_CONNECTED : WAITING_AGENT;
       delay(100);
@@ -730,7 +641,7 @@ void ros_handler() {
     case AGENT_DISCONNECTED:
       cfg_lt(3, 0, 3, 0);
       zero_ros_cmds();
-      zero_all_motors();
+      motors.zero_all_motors();
       ros_destroy_entities();
       delay(100);
       state = WAITING_AGENT;
