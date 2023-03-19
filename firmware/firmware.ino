@@ -1,4 +1,4 @@
-#include <motors_6.h>
+#include "motors_6.h"
 
 #include <LapX9C10X.h>
 #include <ServoInput.h>
@@ -116,6 +116,15 @@ int ros_cmd_f;
 
 // FUNCTIONS --------------------------------------------------------
 
+namespace std {
+void __throw_bad_alloc() {
+  Serial.println("Unable to allocate memory");
+}
+void __throw_length_error( char const*e ) {
+  Serial.print("Length Error :"); Serial.println(e);
+}
+}
+
 // Check current RC status (in order to minimize time polling)
 void read_rc() {
   cmd_srg = orxElev.mapDeadzone(-100, 101, 0.05);
@@ -131,41 +140,41 @@ void read_rc() {
 
 // Translate RC input to 4x holonomic motor system
 // A - Port Aft, D - Starboard Aft, C - Starboard Fore, B - Port Fore
-void set_motor_4x_holo() {
-  int a = (cmd_srg + cmd_swy - cmd_yaw);
-  int b = (cmd_srg - cmd_swy - cmd_yaw);
-  int c = (cmd_srg + cmd_swy + cmd_yaw);
-  int d = (cmd_srg - cmd_swy + cmd_yaw);
-  float max_val = max(100, max(max(abs(a), abs(b)), max(abs(c), abs(d)))) / 100.0;
-  rc_cmd_a = a / max_val;
-  rc_cmd_b = b / max_val;
-  rc_cmd_c = c / max_val;
-  rc_cmd_d = d / max_val;
-}
+// void set_motor_4x_holo() {
+//   int a = (cmd_srg + cmd_swy - cmd_yaw);
+//   int b = (cmd_srg - cmd_swy - cmd_yaw);
+//   int c = (cmd_srg + cmd_swy + cmd_yaw);
+//   int d = (cmd_srg - cmd_swy + cmd_yaw);
+//   float max_val = max(100, max(max(abs(a), abs(b)), max(abs(c), abs(d)))) / 100.0;
+//   rc_cmd_a = a / max_val;
+//   rc_cmd_b = b / max_val;
+//   rc_cmd_c = c / max_val;
+//   rc_cmd_d = d / max_val;
+// }
 
-void set_motor_4x_tank() {
-  int a = cmd_srg;
-  int d = cmd_srg;
-  int b = cmd_srg;
-  int c = cmd_srg;
+// void set_motor_4x_tank() {
+//   int a = cmd_srg;
+//   int d = cmd_srg;
+//   int b = cmd_srg;
+//   int c = cmd_srg;
   
-  float max_val = max(100, max(max(abs(a), abs(b)), max(abs(c), abs(d)))) / 100.0;
-  rc_cmd_a = a / max_val;
-  rc_cmd_b = b / max_val;
-  rc_cmd_c = c / max_val;
-  rc_cmd_d = d / max_val;
-}
+//   float max_val = max(100, max(max(abs(a), abs(b)), max(abs(c), abs(d)))) / 100.0;
+//   rc_cmd_a = a / max_val;
+//   rc_cmd_b = b / max_val;
+//   rc_cmd_c = c / max_val;
+//   rc_cmd_d = d / max_val;
+// }
 
 // Translate RC input to 2 motor system
-void set_motor_2x() {
-  int a = (cmd_srg - cmd_yaw);
-  int d = (cmd_srg + cmd_yaw);
-  float max_val = max(100, max(abs(a), abs(d))) / 100;
-  rc_cmd_a = a / max_val;
-  rc_cmd_b = 0;
-  rc_cmd_c = 0;
-  rc_cmd_d = d / max_val;
-}
+// void set_motor_2x() {
+//   int a = (cmd_srg - cmd_yaw);
+//   int d = (cmd_srg + cmd_yaw);
+//   float max_val = max(100, max(abs(a), abs(d))) / 100;
+//   rc_cmd_a = a / max_val;
+//   rc_cmd_b = 0;
+//   rc_cmd_c = 0;
+//   rc_cmd_d = d / max_val;
+// }
 
 // C - Port Fore      D - Starboard Fore
 // B - Port Center    E - Starboard Center
@@ -179,16 +188,16 @@ void set_motor_6x() {
   int f = cmd_srg + cmd_yaw;
   
   
-  float max_val = max(100, 
-    max(max(max(abs(a), abs(b)), max(abs(c), abs(d))), max(abs(e), abs(f)))
-  ) / 100.0;
+  // float max_val = max(100, 
+  //   max(max(max(abs(a), abs(b)), max(abs(c), abs(d))), max(abs(e), abs(f)))
+  // ) / 100.0;
 
-  rc_cmd_a = a / max_val;
-  rc_cmd_b = b / max_val;
-  rc_cmd_c = c / max_val;
-  rc_cmd_d = d / max_val;
-  rc_cmd_e = e / max_val;
-  rc_cmd_f = f / max_val;
+  rc_cmd_a = a;
+  rc_cmd_b = b;
+  rc_cmd_c = c;
+  rc_cmd_d = d;
+  rc_cmd_e = e;
+  rc_cmd_f = f;
 }
 
 template<uint8_t bs>

@@ -1,7 +1,7 @@
 #ifndef MOTOR_6_H
 #define MOTOR_6_H
 
-#include <motors.h>
+#include "motors.h"
 #include <Servo.h>
 #include <vector>
 
