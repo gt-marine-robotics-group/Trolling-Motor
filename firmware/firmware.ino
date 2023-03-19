@@ -13,6 +13,7 @@
 #include <rmw_microros/rmw_microros.h>
 #include <std_msgs/msg/int32.h>
 #include <std_msgs/msg/float32.h>
+#include <vector>
 /*
   GITMRG Nova V1.1 Custom BLDC Thruster Driver
 
@@ -508,12 +509,8 @@ void exec_mode(int mode, bool killed) {
   else {
     if (mode == 0){ // AUTONOMOUS
       ros_handler();
-      motor_a.writeMicroseconds(ros_cmd_a*4 + 1500);
-      motor_b.writeMicroseconds(ros_cmd_b*4 + 1500);
-      motor_c.writeMicroseconds(ros_cmd_c*4 + 1500);
-      motor_d.writeMicroseconds(ros_cmd_d*4 + 1500);
-      motor_e.writeMicroseconds(ros_cmd_e*4 + 1500);
-      motor_f.writeMicroseconds(ros_cmd_f*4 + 1500);
+      std::vector<int> commands = {ros_cmd_a, ros_cmd_b, ros_cmd_c, ros_cmd_d, ros_cmd_e, ros_cmd_f};
+      motors.write_from_ros(commands);
       msg_x.data = ros_cmd_a;
       delay(20);
 //      msg_x.data = 2;
@@ -526,12 +523,8 @@ void exec_mode(int mode, bool killed) {
       set_motor_6x();
       cfg_lt(0, 1, 0, 0);
       Serial.println("Throttle set");
-      motor_a.writeMicroseconds(rc_cmd_a*4 + 1500); // Send signal to ESC.
-      motor_b.writeMicroseconds(rc_cmd_b*4 + 1500); // Send signal to ESC.
-      motor_c.writeMicroseconds(rc_cmd_c*4 + 1500); // Send signal to ESC.
-      motor_d.writeMicroseconds(rc_cmd_d*4 + 1500); // Send signal to ESC.
-      motor_e.writeMicroseconds(rc_cmd_e*4 + 1500);
-      motor_f.writeMicroseconds(rc_cmd_f*4 + 1500);
+      std::vector<int> commands = {rc_cmd_a, rc_cmd_b, rc_cmd_c, rc_cmd_d, rc_cmd_e, rc_cmd_f};
+      motors.write_from_rc(commands);
 //      Serial.println(String(rc_cmd_d));
     }
     else {
