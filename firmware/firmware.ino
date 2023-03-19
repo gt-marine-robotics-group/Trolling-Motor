@@ -1,4 +1,5 @@
 #include "motors_6.h"
+#include "remote_control.h"
 
 #include <LapX9C10X.h>
 #include <ServoInput.h>
@@ -44,8 +45,6 @@ enum states {
   AGENT_DISCONNECTED
 } state;
 
-Motor6 motors{};
-
 // PINS -------------------------------------------------------------
 // RC INPUT
 const int ORX_AUX1_PIN = 43; // checks if killed - need to figure out reset check
@@ -80,8 +79,11 @@ unsigned long last_time = 0;
 
 // DEVICES ----------------------------------------------------------
 // MOTORS
+Motor6 motors{};
 
 // RC INPUTS
+RemoteControl rc = RemoteControl{};
+
 ServoInputPin<ORX_AUX1_PIN> orxAux1; // 3 states - Manual / Paused / Autonomous
 ServoInputPin<ORX_GEAR_PIN> orxGear; // 2 states
 ServoInputPin<ORX_RUDD_PIN> orxRudd; // Continuous
@@ -198,50 +200,6 @@ void set_motor_6x() {
   rc_cmd_d = d;
   rc_cmd_e = e;
   rc_cmd_f = f;
-}
-
-template<uint8_t bs>
-bool calibrate_pin(ServoInputPin<bs> &input_pin) {
-  const uint16_t pulse = (uint16_t) input_pin.getPulseRaw();
-  // Check + store range min/max
-  if (pulse < input_pin.getRangeMin()) {
-    input_pin.setRangeMin(pulse);
-  }
-  else if (pulse > input_pin.getRangeMax()) {
-    input_pin.setRangeMax(pulse);
-  }
-  char buffer[100];
-  sprintf(buffer, "Servo PWM (us) | Min: %4u  Val: %4u  Max: %4u | Range: %4u", 
-    input_pin.getRangeMin(), pulse, input_pin.getRangeMax(), input_pin.getRange());
-  //Serial.println(buffer);
-  if (input_pin.getRange() < 50 and input_pin.mapDeadzone(-100,100, .02) != 0){
-    return false;
-  }
-  return true;
-}
-
-bool calibrate_rc() {
-  // Get servo signal pulse length, in microseconds (unfiltered)
-  bool e_s = calibrate_pin(orxElev);
-  bool a_s = calibrate_pin(orxAile);
-  bool r_s = calibrate_pin(orxRudd);
-  char buffer[100];
-  sprintf(buffer, "Calibrated Values | Elev: %4i  Aile: %4i  Rudd: %4i", 
-    orxElev.mapDeadzone(-100, 100, 0.1), orxAile.mapDeadzone(-100, 100, 0.1), orxRudd.mapDeadzone(-100, 100, 0.1));
-  //Serial.println(buffer);
-  return (e_s and a_s and r_s);
-}
-
-template<uint8_t bs>
-void center_pin(ServoInputPin<bs> &input_pin) {
-  int center = input_pin.getRangeCenter(); 
-  input_pin.setRange(center, center); 
-}
-
-void center_rc() {
-  center_pin(orxElev);
-  center_pin(orxAile);
-  center_pin(orxRudd);
 }
 
 // ESTOP MONITOR
@@ -525,7 +483,7 @@ void exec_mode(int mode, bool killed) {
 //      msg_x.data = 2;
     }
     else if (mode == 1) { // CALIBRATION
-      calibrate_rc();
+      rc.check_calibration_ready();
       cfg_lt(0, 2, 0, 0);
     }
     else if (mode == 2) { // REMOTE CONTROL
@@ -551,7 +509,7 @@ void exec_mode(int mode, bool killed) {
 
 void setup() {
   Serial.begin(9600);
-  loop_time = millis();
+  // loop_time = millis();
   
   delay(100);
   Serial.println("NOVA MOTOR STARTING...");
@@ -570,25 +528,7 @@ void setup() {
 //  motor_d.setThrottle(0);
 
   Serial.println("CALIBRATING CONTROLLER...");
-  bool mode_ready = false;
-  bool calibration_ready = false;
-  int calibration_zero_check = 0;
-  center_rc();
-  while(not mode_ready or not calibration_ready or calibration_zero_check < 15) {
-    loop_time = millis();
-    run_lt(2, 2, 0, 0);
-    read_rc();
-    if (cmd_ctr == 1) {
-      mode_ready = true;
-    }
-    calibration_ready = calibrate_rc();
-    if (abs(cmd_srg) + abs(cmd_swy) + abs(cmd_yaw) <= 4) {
-      calibration_zero_check += 1;
-    }
-    else {
-      calibration_zero_check = 0;
-    }
-  }
+  rc.calibrate();
 
   Serial.println("MOTOR SETUP");
   motors.motors_setup(Motor6::default_pins);
