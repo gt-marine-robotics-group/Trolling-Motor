@@ -20,8 +20,6 @@
   https://stackoverflow.com/questions/6504211/is-it-possible-to-include-a-library-from-another-library-using-the-arduino-ide
   https://github.com/micro-ROS/micro_ros_arduino/blob/foxy/examples/micro-ros_reconnection_example/micro-ros_reconnection_example.ino
 */
-#define LIMIT_RESISTANCE 60
-#define eToK(e) ((int8_t) (((e) * LIMIT_RESISTANCE / 100)))
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){return false;}}
 #define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
 #define EXECUTE_EVERY_N_MS(MS, X)  do { \
@@ -560,6 +558,21 @@ void ros_destroy_entities() {
   rclc_support_fini(&support);
 }
 
+int maxF(int throttle) {
+  if (throttle < -100) {
+    throttle = -100;
+  } else if (throttle > 100) {
+    throttle = 100;
+  }
+  return throttle;
+}
+
+int throttleToESC(int throttle) {
+  throttle = maxF(throttle);
+  throttle = throttle * 4 + 1500;
+  return throttle;
+}
+
 void exec_mode(int mode, bool killed) {
   // Publish Vehicle State
   std_msgs__msg__Float32 msg_x;
@@ -575,12 +588,12 @@ void exec_mode(int mode, bool killed) {
   else {
     if (mode == 0){ // AUTONOMOUS
       ros_handler();
-      motor_a.writeMicroseconds(ros_cmd_a*4 + 1500);
-      motor_b.writeMicroseconds(ros_cmd_b*4 + 1500);
-      motor_c.writeMicroseconds(ros_cmd_c*4 + 1500);
-      motor_d.writeMicroseconds(ros_cmd_d*4 + 1500);
-      motor_e.writeMicroseconds(ros_cmd_e*4 + 1500);
-      motor_f.writeMicroseconds(ros_cmd_f*4 + 1500);
+      motor_a.writeMicroseconds(throttleToESC(ros_cmd_a));
+      motor_b.writeMicroseconds(throttleToESC(ros_cmd_b));
+      motor_c.writeMicroseconds(throttleToESC(ros_cmd_c));
+      motor_d.writeMicroseconds(throttleToESC(ros_cmd_d));
+      motor_e.writeMicroseconds(throttleToESC(ros_cmd_e));
+      motor_f.writeMicroseconds(throttleToESC(ros_cmd_f));
       msg_x.data = ros_cmd_a;
       delay(20);
 //      msg_x.data = 2;
@@ -593,12 +606,12 @@ void exec_mode(int mode, bool killed) {
       set_motor_6x();
       cfg_lt(0, 1, 0, 0);
       Serial.println("Throttle set");
-      motor_a.writeMicroseconds(rc_cmd_a*4 + 1500); // Send signal to ESC.
-      motor_b.writeMicroseconds(rc_cmd_b*4 + 1500); // Send signal to ESC.
-      motor_c.writeMicroseconds(rc_cmd_c*4 + 1500); // Send signal to ESC.
-      motor_d.writeMicroseconds(rc_cmd_d*4 + 1500); // Send signal to ESC.
-      motor_e.writeMicroseconds(rc_cmd_e*4 + 1500);
-      motor_f.writeMicroseconds(rc_cmd_f*4 + 1500);
+      motor_a.writeMicroseconds(throttleToESC(rc_cmd_a));
+      motor_b.writeMicroseconds(throttleToESC(rc_cmd_b));
+      motor_c.writeMicroseconds(throttleToESC(rc_cmd_c));
+      motor_d.writeMicroseconds(throttleToESC(rc_cmd_d));
+      motor_e.writeMicroseconds(throttleToESC(rc_cmd_e));
+      motor_f.writeMicroseconds(throttleToESC(rc_cmd_f));
 //      Serial.println(String(rc_cmd_d));
     }
     else {
