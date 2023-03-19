@@ -1,6 +1,7 @@
 #ifndef REMOTE_CONTROL_H
 #define REMOTE_CONTROL_H
 
+#include "light_tower.h"
 #include <ServoInput.h>
 
 namespace rc_constants {
@@ -49,7 +50,7 @@ class RemoteControl {
 
         bool check_calibration_ready();
 
-        void calibrate();
+        void calibrate(LightTower& lt);
 
         void read();
 

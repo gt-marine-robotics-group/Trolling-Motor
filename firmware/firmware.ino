@@ -1,5 +1,6 @@
 #include "motors_6.h"
 #include "remote_control.h"
+#include "light_tower.h"
 
 #include <LapX9C10X.h>
 #include <ServoInput.h>
@@ -46,16 +47,6 @@ enum states {
 } state;
 
 // PINS -------------------------------------------------------------
-
-// LIGHT TOWER
-const int LT_RED_PIN = A4;
-const int LT_GRN_PIN = A3;
-const int LT_YEL_PIN = A5;
-const int LT_BLU_PIN = A6;
-int lt_red_state = 0;
-int lt_grn_state = 0;
-int lt_yel_state = 0;
-int lt_blu_state = 0;
 
 //// ESTOP
 //const int ESTOP_OUT_PIN = A8;
@@ -115,54 +106,7 @@ void __throw_length_error( char const*e ) {
 // LIGHT TOWER VARS AND FUNCTIONS
 // TODO: Split into separate library
 
-void setup_lt() {
-  pinMode(LT_RED_PIN, OUTPUT);
-  pinMode(LT_YEL_PIN, OUTPUT);
-  pinMode(LT_GRN_PIN, OUTPUT);
-  pinMode(LT_BLU_PIN, OUTPUT);
-}
-
-void set_lt(bool r, bool y, bool g, bool b) {
-  digitalWrite(LT_RED_PIN, r);
-  digitalWrite(LT_YEL_PIN, y);
-  digitalWrite(LT_GRN_PIN, g);
-  digitalWrite(LT_BLU_PIN, b);
-}
-
-void set_light(int pin, int flash) {
-  bool light_on =  false;
-  if (flash == 0) {
-    light_on = false;
-  }
-  else if (flash == 1) {
-    light_on = true;
-  }
-  else if (flash == 2) {
-    if (loop_time % 500 <= 200) {
-      light_on = true;
-    }
-  }
-  else if (flash == 3) {
-    if (loop_time % 1000 <= 400) {
-      light_on = true;
-    }
-  }
-  digitalWrite(pin, light_on);
-}
-
-void run_lt(int r, int y, int g, int b) {
-  set_light(LT_RED_PIN, r);
-  set_light(LT_YEL_PIN, y);
-  set_light(LT_GRN_PIN, g);
-  set_light(LT_BLU_PIN, b);  
-}
-
-void cfg_lt(int r, int y, int g, int b){
-  lt_red_state = r;
-  lt_yel_state = y;
-  lt_grn_state = g;
-  lt_blu_state = b;
-}
+LightTower lt{};
 
 //https://github.com/micro-ROS/micro_ros_arduino/blob/humble/examples/micro-ros_publisher/micro-ros_publisher.ino
 //https://github.com/micro-ROS/micro_ros_arduino/blob/humble/examples/micro-ros_subscriber/micro-ros_subscriber.ino
@@ -369,7 +313,9 @@ void exec_mode(int mode, bool killed) {
   if (killed) {
     // TODO: Listen for killed on actual E-stop circuit in case of manual shutoff
     // TODO: Add a time delay before resuming from killed state with blink
-    cfg_lt(1, 0, 0, 0);
+    // cfg_lt(1, 0, 0, 0);
+    lt.configure(LightTower::LightStates::on, LightTower::LightStates::off,
+      LightTower::LightStates::off, LightTower::LightStates::off);
   }
   else {
     if (mode + 1 == RemoteControl::ControlState::autonomous){ // AUTONOMOUS
@@ -382,12 +328,15 @@ void exec_mode(int mode, bool killed) {
     }
     else if (mode + 1 == RemoteControl::ControlState::calibration) { // CALIBRATION
       rc.check_calibration_ready();
-      cfg_lt(0, 2, 0, 0);
+      lt.configure(LightTower::LightStates::off, LightTower::LightStates::flashing,
+        LightTower::LightStates::off, LightTower::LightStates::off);
     }
     else if (mode + 1 == RemoteControl::ControlState::remote_control) { // REMOTE CONTROL
       // set_motor_6x();
       std::vector<int> cmds = motors.get_rc_motor_cmds(rc);
-      cfg_lt(0, 1, 0, 0);
+      // cfg_lt(0, 1, 0, 0);
+      lt.configure(LightTower::LightStates::off, LightTower::LightStates::on,
+        LightTower::LightStates::off, LightTower::LightStates::off);
       Serial.println("Throttle set");
       // std::vector<int> commands = {rc_cmd_a, rc_cmd_b, rc_cmd_c, rc_cmd_d, rc_cmd_e, rc_cmd_f};
       motors.write_from_rc(cmds);
@@ -407,12 +356,13 @@ void setup() {
   Serial.println("NOVA MOTOR STARTING...");
   Serial.println("SETTING UP LIGHT TOWER...");
 //  setup_estop();
-//  setup_lt();
+  // setup_lt();
+  lt.setup();
 
   Serial.println("INITIALIZING MOTOR CONTROLLERS...");
 
   Serial.println("CALIBRATING CONTROLLER...");
-  rc.calibrate();
+  rc.calibrate(lt);
 
   Serial.println("MOTOR SETUP");
   motors.motors_setup(Motor6::default_pins);
@@ -443,14 +393,16 @@ void ros_handler() {
   bool created = false;
   switch (state) {
     case WAITING_AGENT:
-      cfg_lt(0, 0, 3, 0);
+      lt.configure(LightTower::LightStates::off, LightTower::LightStates::off,
+        LightTower::LightStates::fast_flashing, LightTower::LightStates::off);
       zero_ros_cmds();
       motors.zero_all_motors();
       EXECUTE_EVERY_N_MS(2000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;);
       
       break;
     case AGENT_AVAILABLE:
-      cfg_lt(0, 0, 2, 0);
+      lt.configure(LightTower::LightStates::off, LightTower::LightStates::off,
+        LightTower::LightStates::flashing, LightTower::LightStates::off);
       zero_ros_cmds();
       motors.zero_all_motors();
       created = ros_create_entities();
@@ -461,11 +413,13 @@ void ros_handler() {
       };
       break;
     case AGENT_CONNECTED:
-      cfg_lt(0, 0, 1, 0);
+      lt.configure(LightTower::LightStates::off, LightTower::LightStates::off,
+        LightTower::LightStates::on, LightTower::LightStates::off);
       EXECUTE_EVERY_N_MS(1000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
       break;
     case AGENT_DISCONNECTED:
-      cfg_lt(3, 0, 3, 0);
+      lt.configure(LightTower::LightStates::fast_flashing, LightTower::LightStates::off,
+        LightTower::LightStates::fast_flashing, LightTower::LightStates::off);
       zero_ros_cmds();
       motors.zero_all_motors();
       ros_destroy_entities();
@@ -493,12 +447,10 @@ void loop() {
   exec_mode(rc.get_ctr_state(), boat_killed);
   // Update light tower
   if (estop_state == true) {
-    lt_red_state = 1;
+    lt.configure(LightTower::LightStates::off, LightTower::LightStates::off,
+      LightTower::LightStates::on, LightTower::LightStates::on);
   }
-  else {
-    lt_red_state = 0;
-  }
-  run_lt(lt_red_state, lt_yel_state, lt_grn_state, lt_blu_state);
+  lt.display();
   if (state == AGENT_CONNECTED) {
     rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
   }

@@ -1,4 +1,5 @@
 #include "remote_control.h"
+#include "light_tower.h"
 #include <Arduino.h>
 #include <ServoInput.h>
 #include <cstdlib>
@@ -35,7 +36,7 @@ bool RemoteControl::check_calibration_ready() {
     return (e_s && a_s && r_s);
 }
 
-void RemoteControl::calibrate() {
+void RemoteControl::calibrate(LightTower& lt) {
     center_rc();
 
     uint32_t loop_time = millis();
@@ -45,7 +46,8 @@ void RemoteControl::calibrate() {
 
     while(m_ctr_state != ControlState::calibration || !calibration_ready || !(calibration_zero_check < 15)) {
         loop_time = millis();
-        // run_lt(2, 2, 0, 0);
+        lt.configure(LightTower::LightStates::flashing, LightTower::LightStates::flashing,
+            LightTower::LightStates::off, LightTower::LightStates::off);
         read();
         calibration_ready = check_calibration_ready();
         if (abs(m_srg) + abs(m_swy) + abs(m_yaw) <= 4) {
