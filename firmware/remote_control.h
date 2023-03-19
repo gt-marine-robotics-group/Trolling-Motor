@@ -79,6 +79,7 @@ bool RemoteControl::check_pin_calibrated(ServoInputPin<N>& input_pin) {
     char buffer[100];
     sprintf(buffer, "Servo PWM (us) | Min: %4u  Val: %4u  Max: %4u | Range: %4u", 
         input_pin.getRangeMin(), pulse, input_pin.getRangeMax(), input_pin.getRange());
+    Serial.println(buffer);
     if (input_pin.getRange() < 50 and input_pin.mapDeadzone(-100,100, .02) != 0){
         return false;
     }

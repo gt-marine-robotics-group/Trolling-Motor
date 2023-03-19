@@ -75,7 +75,7 @@ unsigned long last_time = 0;
 Motor6 motors{};
 
 // RC INPUTS
-RemoteControl rc = RemoteControl{};
+RemoteControl rc {};
 
 //Nick Code :^[
 // ROS GLOBAL VARIABLES
@@ -372,7 +372,7 @@ void exec_mode(int mode, bool killed) {
     cfg_lt(1, 0, 0, 0);
   }
   else {
-    if (mode == 0){ // AUTONOMOUS
+    if (mode + 1 == RemoteControl::ControlState::autonomous){ // AUTONOMOUS
       ros_handler();
       std::vector<int> commands = {ros_cmd_a, ros_cmd_b, ros_cmd_c, ros_cmd_d, ros_cmd_e, ros_cmd_f};
       motors.write_from_ros(commands);
@@ -380,11 +380,11 @@ void exec_mode(int mode, bool killed) {
       delay(20);
 //      msg_x.data = 2;
     }
-    else if (mode == 1) { // CALIBRATION
+    else if (mode + 1 == RemoteControl::ControlState::calibration) { // CALIBRATION
       rc.check_calibration_ready();
       cfg_lt(0, 2, 0, 0);
     }
-    else if (mode == 2) { // REMOTE CONTROL
+    else if (mode + 1 == RemoteControl::ControlState::remote_control) { // REMOTE CONTROL
       // set_motor_6x();
       std::vector<int> cmds = motors.get_rc_motor_cmds(rc);
       cfg_lt(0, 1, 0, 0);

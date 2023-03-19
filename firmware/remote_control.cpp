@@ -18,6 +18,7 @@ void RemoteControl::read() {
     char buffer[100];
     sprintf(buffer, "RC | SRG: %4i  SWY: %4i  YAW: %4i CTR: %1i KIL: %1i", 
         m_srg, m_swy, m_yaw, m_ctr_state, m_kill_state);
+    Serial.println(buffer);
 }
 
 bool RemoteControl::check_calibration_ready() {
@@ -30,6 +31,7 @@ bool RemoteControl::check_calibration_ready() {
         m_orx_aile.mapDeadzone(-100, 100, 0.1), 
         m_orx_rudd.mapDeadzone(-100, 100, 0.1)
     );
+    Serial.println(buffer);
     return (e_s && a_s && r_s);
 }
 
@@ -41,7 +43,7 @@ void RemoteControl::calibrate() {
     bool calibration_ready = false;
     int calibration_zero_check = 0;
 
-    while(m_ctr_state != ControlState::calibration || !calibration_ready || !calibration_zero_check < 15) {
+    while(m_ctr_state != ControlState::calibration || !calibration_ready || !(calibration_zero_check < 15)) {
         loop_time = millis();
         // run_lt(2, 2, 0, 0);
         read();
