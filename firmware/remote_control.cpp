@@ -13,12 +13,7 @@ void RemoteControl::read() {
     m_srg = m_orx_elev.mapDeadzone(-100, 101, 0.05);
     m_swy = m_orx_aile.mapDeadzone(-100, 101, 0.05);
     m_yaw = m_orx_rudd.mapDeadzone(-100, 101, 0.05);
-    long aux_map = m_orx_aux1.map(0, 3);
-    if (aux_map == 1) {
-        m_ctr_state = ControlState::ready; 
-    } else {
-        m_ctr_state = ControlState::not_ready;
-    }
+    m_ctr_state = static_cast<ControlState>(m_orx_aux1.map(0, 2));
     // m_kill_state = static_cast<KillState>(m_orx_gear.map(1, 0)); # WRONG ?
     char buffer[100];
     sprintf(buffer, "RC | SRG: %4i  SWY: %4i  YAW: %4i CTR: %1i KIL: %1i", 
@@ -46,7 +41,7 @@ void RemoteControl::calibrate() {
     bool calibration_ready = false;
     int calibration_zero_check = 0;
 
-    while(m_ctr_state != ControlState::ready || !calibration_ready || !calibration_zero_check < 15) {
+    while(m_ctr_state != ControlState::calibration || !calibration_ready || !calibration_zero_check < 15) {
         loop_time = millis();
         // run_lt(2, 2, 0, 0);
         read();
@@ -58,4 +53,20 @@ void RemoteControl::calibrate() {
         calibration_zero_check = 0;
         }
     }
+}
+
+int RemoteControl::get_srg() const {
+    return m_srg;
+}
+
+int RemoteControl::get_swy() const {
+    return m_swy;
+}
+
+int RemoteControl::get_yaw() const {
+    return m_yaw;
+}
+
+int RemoteControl::get_ctr_state() const {
+    return m_ctr_state;
 }

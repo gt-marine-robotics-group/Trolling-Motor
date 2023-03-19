@@ -2,6 +2,7 @@
 #define MOTOR_6_H
 
 #include "motors.h"
+#include "remote_control.h"
 #include <Servo.h>
 #include <vector>
 
@@ -16,6 +17,8 @@ class Motor6 : public Motors {
         static const std::vector<int> default_pins;
 
         Motor6();
+
+        const std::vector<int> get_rc_motor_cmds(const RemoteControl& rc);
 };
 
 #endif

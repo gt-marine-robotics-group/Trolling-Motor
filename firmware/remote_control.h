@@ -15,7 +15,7 @@ namespace rc_constants {
 class RemoteControl {
     public:
         enum ControlState {
-            not_ready, ready
+            autonomous, calibration, remote_control
         };
 
         enum KillState {
@@ -34,7 +34,7 @@ class RemoteControl {
         int m_srg{};
         int m_swy{};
         int m_yaw{};
-        ControlState m_ctr_state {ControlState::not_ready};
+        ControlState m_ctr_state {ControlState::calibration};
         KillState m_kill_state {KillState::not_killed};
 
         template <uint8_t N>
@@ -52,6 +52,12 @@ class RemoteControl {
         void calibrate();
 
         void read();
+
+        int get_srg() const;
+        int get_swy() const;
+        int get_yaw() const;
+
+        int get_ctr_state() const;
 };
 
 template <uint8_t N>

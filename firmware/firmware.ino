@@ -46,13 +46,6 @@ enum states {
 } state;
 
 // PINS -------------------------------------------------------------
-// RC INPUT
-const int ORX_AUX1_PIN = 43; // checks if killed - need to figure out reset check
-const int ORX_GEAR_PIN = 45; // Kill switch
-const int ORX_RUDD_PIN = 47; // yaw
-const int ORX_ELEV_PIN = 49; // WAM-V translate forward / backward
-const int ORX_AILE_PIN = 51; // WAM-V translate left / right
-const int ORX_THRO_PIN = 53;
 
 // LIGHT TOWER
 const int LT_RED_PIN = A4;
@@ -84,30 +77,10 @@ Motor6 motors{};
 // RC INPUTS
 RemoteControl rc = RemoteControl{};
 
-ServoInputPin<ORX_AUX1_PIN> orxAux1; // 3 states - Manual / Paused / Autonomous
-ServoInputPin<ORX_GEAR_PIN> orxGear; // 2 states
-ServoInputPin<ORX_RUDD_PIN> orxRudd; // Continuous
-ServoInputPin<ORX_ELEV_PIN> orxElev; // Continuous
-ServoInputPin<ORX_AILE_PIN> orxAile; // Continuous
-ServoInputPin<ORX_THRO_PIN> orxThro; // Continuous
-
 //Nick Code :^[
 // ROS GLOBAL VARIABLES
 
-int cmd_srg; // Commanded Surge
-int cmd_swy; // Commanded Sway
-int cmd_yaw; // Commanded Yaw
-int cmd_ctr; // Commanded Control State
-int cmd_kil; // Commanded Kill State
-
 int estop_state; // ESTOP HIGH or LOW (LOW = KILLED)
-
-int rc_cmd_a;
-int rc_cmd_b;
-int rc_cmd_c;
-int rc_cmd_d;
-int rc_cmd_e;
-int rc_cmd_f;
 
 int ros_cmd_a;
 int ros_cmd_b;
@@ -125,81 +98,6 @@ void __throw_bad_alloc() {
 void __throw_length_error( char const*e ) {
   Serial.print("Length Error :"); Serial.println(e);
 }
-}
-
-// Check current RC status (in order to minimize time polling)
-void read_rc() {
-  cmd_srg = orxElev.mapDeadzone(-100, 101, 0.05);
-  cmd_swy = orxAile.mapDeadzone(-100, 101, 0.05);
-  cmd_yaw = orxRudd.mapDeadzone(-100, 101, 0.05);
-  cmd_ctr = orxAux1.map(0, 3);
-  cmd_kil = orxGear.map(1, 0);
-  char buffer[100];
-  sprintf(buffer, "RC | SRG: %4i  SWY: %4i  YAW: %4i CTR: %1i KIL: %1i", 
-    cmd_srg, cmd_swy, cmd_yaw, cmd_ctr, cmd_kil);
-  //Serial.println(buffer);
-}
-
-// Translate RC input to 4x holonomic motor system
-// A - Port Aft, D - Starboard Aft, C - Starboard Fore, B - Port Fore
-// void set_motor_4x_holo() {
-//   int a = (cmd_srg + cmd_swy - cmd_yaw);
-//   int b = (cmd_srg - cmd_swy - cmd_yaw);
-//   int c = (cmd_srg + cmd_swy + cmd_yaw);
-//   int d = (cmd_srg - cmd_swy + cmd_yaw);
-//   float max_val = max(100, max(max(abs(a), abs(b)), max(abs(c), abs(d)))) / 100.0;
-//   rc_cmd_a = a / max_val;
-//   rc_cmd_b = b / max_val;
-//   rc_cmd_c = c / max_val;
-//   rc_cmd_d = d / max_val;
-// }
-
-// void set_motor_4x_tank() {
-//   int a = cmd_srg;
-//   int d = cmd_srg;
-//   int b = cmd_srg;
-//   int c = cmd_srg;
-  
-//   float max_val = max(100, max(max(abs(a), abs(b)), max(abs(c), abs(d)))) / 100.0;
-//   rc_cmd_a = a / max_val;
-//   rc_cmd_b = b / max_val;
-//   rc_cmd_c = c / max_val;
-//   rc_cmd_d = d / max_val;
-// }
-
-// Translate RC input to 2 motor system
-// void set_motor_2x() {
-//   int a = (cmd_srg - cmd_yaw);
-//   int d = (cmd_srg + cmd_yaw);
-//   float max_val = max(100, max(abs(a), abs(d))) / 100;
-//   rc_cmd_a = a / max_val;
-//   rc_cmd_b = 0;
-//   rc_cmd_c = 0;
-//   rc_cmd_d = d / max_val;
-// }
-
-// C - Port Fore      D - Starboard Fore
-// B - Port Center    E - Starboard Center
-// A - Port Aft       F - Starboard Aft
-void set_motor_6x() {
-  int a = cmd_srg - cmd_yaw;
-  int b = -cmd_swy;
-  int c = cmd_srg - cmd_yaw;
-  int d = cmd_srg + cmd_yaw;
-  int e = cmd_swy;
-  int f = cmd_srg + cmd_yaw;
-  
-  
-  // float max_val = max(100, 
-  //   max(max(max(abs(a), abs(b)), max(abs(c), abs(d))), max(abs(e), abs(f)))
-  // ) / 100.0;
-
-  rc_cmd_a = a;
-  rc_cmd_b = b;
-  rc_cmd_c = c;
-  rc_cmd_d = d;
-  rc_cmd_e = e;
-  rc_cmd_f = f;
 }
 
 // ESTOP MONITOR
@@ -487,24 +385,18 @@ void exec_mode(int mode, bool killed) {
       cfg_lt(0, 2, 0, 0);
     }
     else if (mode == 2) { // REMOTE CONTROL
-      set_motor_6x();
+      // set_motor_6x();
+      std::vector<int> cmds = motors.get_rc_motor_cmds(rc);
       cfg_lt(0, 1, 0, 0);
       Serial.println("Throttle set");
-      std::vector<int> commands = {rc_cmd_a, rc_cmd_b, rc_cmd_c, rc_cmd_d, rc_cmd_e, rc_cmd_f};
-      motors.write_from_rc(commands);
+      // std::vector<int> commands = {rc_cmd_a, rc_cmd_b, rc_cmd_c, rc_cmd_d, rc_cmd_e, rc_cmd_f};
+      motors.write_from_rc(cmds);
 //      Serial.println(String(rc_cmd_d));
     }
     else {
       Serial.println("Error, mode not supported");
     }
   }
-///  set_motor_6x();
-
-//  m/sg_x.data = rc_cmd_a;
-
-//  if (/state == AGENT_CONNECTED) {
-//    RCSOF/TCHECK(rcl_publish(&vehicle_state_pub, &msg_x, NULL));
-//  }/
 }
 
 void setup() {
@@ -518,14 +410,6 @@ void setup() {
 //  setup_lt();
 
   Serial.println("INITIALIZING MOTOR CONTROLLERS...");
-//  motor_a.init();
-//  motor_b.init();
-//  motor_c.init();
-//  motor_d.init();
-//  motor_a.setThrottle(0);
-//  motor_b.setThrottle(0);
-//  motor_c.setThrottle(0);
-//  motor_d.setThrottle(0);
 
   Serial.println("CALIBRATING CONTROLLER...");
   rc.calibrate();
@@ -602,10 +486,11 @@ void loop() {
   // E-Stop
 //  read_estop();
   // Polling R/C commands
-  read_rc();
+  // read_rc();
+  rc.read();
   // Execute based on mode
   boat_killed = false;
-  exec_mode(cmd_ctr, boat_killed);
+  exec_mode(rc.get_ctr_state(), boat_killed);
   // Update light tower
   if (estop_state == true) {
     lt_red_state = 1;
