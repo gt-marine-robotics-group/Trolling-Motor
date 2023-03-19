@@ -649,7 +649,7 @@ void ros_handler() {
       cfg_lt(0, 0, 3, 0);
       zero_ros_cmds();
       zero_all_motors();
-      EXECUTE_EVERY_N_MS(2000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;);
+      EXECUTE_EVERY_N_MS(500, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 5)) ? AGENT_AVAILABLE : WAITING_AGENT;);
       break;
     case AGENT_AVAILABLE:
       cfg_lt(0, 0, 2, 0);
@@ -664,7 +664,7 @@ void ros_handler() {
       break;
     case AGENT_CONNECTED:
       cfg_lt(0, 0, 1, 0);
-      EXECUTE_EVERY_N_MS(1000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
+      EXECUTE_EVERY_N_MS(500, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 5)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
       break;
     case AGENT_DISCONNECTED:
       cfg_lt(3, 0, 3, 0);
