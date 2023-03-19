@@ -402,15 +402,12 @@ std_msgs__msg__Float32 state_msg;
 //  RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg, NULL));
 //}
 
-//Nick Code :^(
-
-float limit_coefficient = -1 * .9;
 
 void left_rear_callback(const void * msgin) 
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
-  ros_cmd_a = int(val * 100 * limit_coefficient);
+  ros_cmd_a = int(val * 100);
 //  Serial.print("ros_left_rear_thrust: ");
 //  Serial.println(ros_left_rear_thrust);
 }
@@ -419,15 +416,15 @@ void left_middle_callback(const void * msgin)
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
-  ros_cmd_b = 1 * val * 100 * limit_coefficient;
-  ros_cmd_e = -1 * val * 100 * limit_coefficient;
+  ros_cmd_b = 1 * val * 100;
+  ros_cmd_e = -1 * val * 100;
 }
 
 void left_front_callback(const void * msgin) 
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
-  ros_cmd_c = val * 100 * limit_coefficient;
+  ros_cmd_c = val * 100;
 //  Serial.print("ros_left_front_thrust: ");
 //  Serial.println(ros_left_front_thrust);
 }
@@ -436,7 +433,7 @@ void right_front_callback(const void * msgin)
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
-  ros_cmd_d = val * 100 * limit_coefficient;
+  ros_cmd_d = val * 100;
 //  Serial.print("ros_right_front_thrust: ");
 //  Serial.println(ros_right_front_thrust);
 }
@@ -452,7 +449,7 @@ void right_rear_callback(const void * msgin)
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
-  ros_cmd_f = val * 100 * limit_coefficient;
+  ros_cmd_f = val * 100;
 }
 
 bool ros_create_entities() {
