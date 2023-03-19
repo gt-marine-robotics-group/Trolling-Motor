@@ -453,38 +453,18 @@ void right_rear_callback(const void * msgin)
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
   ros_cmd_f = val * 100 * limit_coefficient;
-//  Serial.print("ros_right_rear_thrust: ");
-//  Serial.println(ros_right_rear_thrust);
 }
 
 bool ros_create_entities() {
   // Initialize micro-ROS allocator
-  
   delay(1000);
   allocator = rcl_get_default_allocator();
-
   //create init_options
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
-  
   // create node
   rcl_node_options_t node_ops = rcl_node_get_default_options();
   node_ops.domain_id = (size_t)(12);
   RCCHECK(rclc_node_init_with_options(&node, "micro_ros_arduino_node", "", &support, &node_ops));
-  // create publisher
-//  RCCHECK(rclc_publisher_init_default(
-//    &vehicle_state_pub,
-//    &node,
-//    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-//    "/wamv/nova/mode"));
-//  
-  // create subscriber
-//  RCCHECK(rclc_subscription_init_default(
-//    &subscriber,
-//    &node,
-//    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-//    "micro_ros_arduino_subscriber"));
-
-  //Nick Code >:-(
 
   // create thrust subscribers
   RCCHECK(rclc_subscription_init_default(
@@ -518,12 +498,8 @@ bool ros_create_entities() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
     "/wamv/thrusters/right_rear_thrust_cmd"));
    
-  // create timer,
-  // const unsigned int timer_timeout = 1000;
-
   // create executor
   RCCHECK(rclc_executor_init(&executor, &support.context, 6, &allocator)); // Increment this for more subs
-  // RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg0, &vehicle_state_callback, ON_NEW_DATA));
 
   RCCHECK(rclc_executor_add_subscription(&executor, &motor_a_sub, &msg_a, &left_rear_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &motor_b_sub, &msg_b, &left_middle_callback, ON_NEW_DATA));
@@ -546,7 +522,6 @@ void ros_destroy_entities() {
   rmw_context_t * rmw_context = rcl_context_get_rmw_context(&support.context);
   (void) rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
 
-  //rcl_publisher_fini(&vehicle_state_pub, &node);
   rcl_subscription_fini(&motor_a_sub, &node);
   rcl_subscription_fini(&motor_b_sub, &node);
   rcl_subscription_fini(&motor_c_sub, &node);
@@ -574,11 +549,6 @@ int throttleToESC(int throttle) {
 }
 
 void exec_mode(int mode, bool killed) {
-  // Publish Vehicle State
-  std_msgs__msg__Float32 msg_x;
-//  //msg_x.data = mode;
-//  msg_x.data = ros_cmd_b;
-  
   // Vehicle Logic
   if (killed) {
     // TODO: Listen for killed on actual E-stop circuit in case of manual shutoff
@@ -594,9 +564,7 @@ void exec_mode(int mode, bool killed) {
       motor_d.writeMicroseconds(throttleToESC(ros_cmd_d));
       motor_e.writeMicroseconds(throttleToESC(ros_cmd_e));
       motor_f.writeMicroseconds(throttleToESC(ros_cmd_f));
-      msg_x.data = ros_cmd_a;
       delay(20);
-//      msg_x.data = 2;
     }
     else if (mode == 1) { // CALIBRATION
       calibrate_rc();
@@ -612,19 +580,11 @@ void exec_mode(int mode, bool killed) {
       motor_d.writeMicroseconds(throttleToESC(rc_cmd_d));
       motor_e.writeMicroseconds(throttleToESC(rc_cmd_e));
       motor_f.writeMicroseconds(throttleToESC(rc_cmd_f));
-//      Serial.println(String(rc_cmd_d));
     }
     else {
       Serial.println("Error, mode not supported");
     }
   }
-///  set_motor_6x();
-
-//  m/sg_x.data = rc_cmd_a;
-
-//  if (/state == AGENT_CONNECTED) {
-//    RCSOF/TCHECK(rcl_publish(&vehicle_state_pub, &msg_x, NULL));
-//  }/
 }
 
 void setup() {
@@ -635,17 +595,7 @@ void setup() {
   Serial.println("NOVA MOTOR STARTING...");
   Serial.println("SETTING UP LIGHT TOWER...");
 //  setup_estop();
-//  setup_lt();
-
-  Serial.println("INITIALIZING MOTOR CONTROLLERS...");
-//  motor_a.init();
-//  motor_b.init();
-//  motor_c.init();
-//  motor_d.init();
-//  motor_a.setThrottle(0);
-//  motor_b.setThrottle(0);
-//  motor_c.setThrottle(0);
-//  motor_d.setThrottle(0);
+  setup_lt();
 
   Serial.println("CALIBRATING CONTROLLER...");
   bool mode_ready = false;
@@ -667,8 +617,9 @@ void setup() {
       calibration_zero_check = 0;
     }
   }
+  Serial.println("============= CALIBRATION COMPLETE ===============");
 
-  Serial.println("MOTOR SETUP");
+  Serial.println("INITIALIZING MOTORS...");
   motor_a.attach(A_SIG_PIN);
   motor_b.attach(B_SIG_PIN);
   motor_c.attach(C_SIG_PIN);
@@ -676,18 +627,14 @@ void setup() {
   motor_e.attach(E_SIG_PIN);
   motor_f.attach(F_SIG_PIN);
   motor_a.writeMicroseconds(1500);
-//  delay(7000);
   motor_b.writeMicroseconds(1500);
-//  delay(7000);
   motor_c.writeMicroseconds(1500);
-//  delay(7000);
   motor_d.writeMicroseconds(1500);
   motor_e.writeMicroseconds(1500);
   motor_f.writeMicroseconds(1500);
-  delay(7000);
+  delay(2500);
 
-  Serial.println("============= CALIBRATION COMPLETE ===============");
-  delay(500);
+  Serial.println("SETTING UP MICROROS TRANSPORTS...");
   set_microros_transports();
   
   state = WAITING_AGENT;
@@ -723,7 +670,6 @@ void ros_handler() {
       zero_ros_cmds();
       zero_all_motors();
       EXECUTE_EVERY_N_MS(2000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;);
-      
       break;
     case AGENT_AVAILABLE:
       cfg_lt(0, 0, 2, 0);
