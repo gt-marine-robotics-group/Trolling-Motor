@@ -390,26 +390,13 @@ rclc_support_t support;
 rcl_node_t node;
 rcl_timer_t timer;
 
-//void subscription_callback(const void * msgin)
-//{  
-//  const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
-//  RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg, NULL));
-//}
 std_msgs__msg__Float32 state_msg;
-//void vehicle_state_publish(float vehicle_state)
-//{
-//  state_msg.data = vehicle_state;
-//  RCSOFTCHECK(rcl_publish(&vehicle_state_pub, &msg, NULL));
-//}
-
 
 void left_rear_callback(const void * msgin) 
 {
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
   ros_cmd_a = int(val * 100);
-//  Serial.print("ros_left_rear_thrust: ");
-//  Serial.println(ros_left_rear_thrust);
 }
 
 void left_middle_callback(const void * msgin)
@@ -425,8 +412,6 @@ void left_front_callback(const void * msgin)
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
   ros_cmd_c = val * 100;
-//  Serial.print("ros_left_front_thrust: ");
-//  Serial.println(ros_left_front_thrust);
 }
 
 void right_front_callback(const void * msgin) 
@@ -434,8 +419,6 @@ void right_front_callback(const void * msgin)
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   float val = msg->data;
   ros_cmd_d = val * 100;
-//  Serial.print("ros_right_front_thrust: ");
-//  Serial.println(ros_right_front_thrust);
 }
 
 //void right_middle_callback(const void * msgin)
