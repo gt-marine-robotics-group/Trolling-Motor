@@ -3,7 +3,6 @@
 #include "light_tower.h"
 #include "micro_ros.h"
 
-#include <LapX9C10X.h>
 #include <ServoInput.h>
 #include <Servo.h>
 
