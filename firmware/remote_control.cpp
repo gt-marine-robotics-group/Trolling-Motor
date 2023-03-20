@@ -44,7 +44,7 @@ void RemoteControl::calibrate(LightTower& lt) {
     bool calibration_ready = false;
     int calibration_zero_check = 0;
 
-    while(m_ctr_state != ControlState::calibration || !calibration_ready || !(calibration_zero_check < 15)) {
+    while(m_ctr_state + 1 != ControlState::calibration || !calibration_ready || !(calibration_zero_check < 15)) {
         loop_time = millis();
         lt.configure(LightTower::LightStates::flashing, LightTower::LightStates::flashing,
             LightTower::LightStates::off, LightTower::LightStates::off);
