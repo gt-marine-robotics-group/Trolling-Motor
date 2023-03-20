@@ -529,12 +529,13 @@ void ros_destroy_entities() {
   rmw_context_t *rmw_context = rcl_context_get_rmw_context(&support.context);
   (void)rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
 
-  rcl_subscription_fini(&motor_a_sub, &node);
-  rcl_subscription_fini(&motor_b_sub, &node);
-  rcl_subscription_fini(&motor_c_sub, &node);
-  rcl_subscription_fini(&motor_d_sub, &node);
-  rcl_subscription_fini(&motor_e_sub, &node);
-  rcl_subscription_fini(&motor_f_sub, &node);
+  // rcl_subscription_fini(&motor_a_sub, &node);
+  // rcl_subscription_fini(&motor_b_sub, &node);
+  // rcl_subscription_fini(&motor_c_sub, &node);
+  // rcl_subscription_fini(&motor_d_sub, &node);
+  // rcl_subscription_fini(&motor_e_sub, &node);
+  // rcl_subscription_fini(&motor_f_sub, &node);
+  rcl_subscription_fini(&all_motors_sub, &node);
   rclc_executor_fini(&executor);
   rcl_node_fini(&node);
   rclc_support_fini(&support);
