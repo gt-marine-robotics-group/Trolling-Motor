@@ -11,6 +11,7 @@
 #include <rmw_microros/rmw_microros.h>
 #include <std_msgs/msg/int32.h>
 #include <std_msgs/msg/float32.h>
+#include <std_msgs/msg/float32_multi_array.h>
 /*
   GITMRG Nova V1.1 Custom BLDC Thruster Driver
 
@@ -384,6 +385,10 @@ rcl_subscription_t motor_d_sub;  // D (right_rear)
 rcl_subscription_t motor_e_sub;  // E
 rcl_subscription_t motor_f_sub;  // F
 
+rcl_subscription_t all_motors_sub;
+
+std_msgs__msg__Float32MultiArray all_msg;
+
 rclc_executor_t executor;
 std_msgs__msg__Int32 msg;
 std_msgs__msg__Int32 msg_a;
@@ -438,6 +443,16 @@ void right_rear_callback(const void *msgin) {
   ros_cmd_f = val * 100;
 }
 
+void all_motors_callback(const void *msgin) {
+  const std_msgs__msg__Float32MultiArray* msg = static_cast<const std_msgs__msg__Float32MultiArray*>(msgin);
+  ros_cmd_a = msg->data.data[0];
+  ros_cmd_b = msg->data.data[1];
+  ros_cmd_c = msg->data.data[2];
+  ros_cmd_d = msg->data.data[3];
+  ros_cmd_e = msg->data.data[4];
+  ros_cmd_f = msg->data.data[5];
+}
+
 bool ros_create_entities() {
   // Initialize micro-ROS allocator
   delay(1000);
@@ -450,54 +465,63 @@ bool ros_create_entities() {
   RCCHECK(rclc_node_init_with_options(&node, "micro_ros_arduino_node", "", &support, &node_ops));
 
   // create thrust subscribers
-  RCCHECK(rclc_subscription_init_default(
-    &motor_a_sub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-    "/wamv/thrusters/left_rear_thrust_cmd"));
-  RCCHECK(rclc_subscription_init_default(
-    &motor_b_sub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-    "/wamv/thrusters/left_middle_thrust_cmd"));
-  RCCHECK(rclc_subscription_init_default(
-    &motor_c_sub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-    "/wamv/thrusters/left_front_thrust_cmd"));
-  RCCHECK(rclc_subscription_init_default(
-    &motor_d_sub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-    "/wamv/thrusters/right_front_thrust_cmd"));
+  // RCCHECK(rclc_subscription_init_default(
+  //   &motor_a_sub,
+  //   &node,
+  //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+  //   "/wamv/thrusters/left_rear_thrust_cmd"));
+  // RCCHECK(rclc_subscription_init_default(
+  //   &motor_b_sub,
+  //   &node,
+  //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+  //   "/wamv/thrusters/left_middle_thrust_cmd"));
+  // RCCHECK(rclc_subscription_init_default(
+  //   &motor_c_sub,
+  //   &node,
+  //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+  //   "/wamv/thrusters/left_front_thrust_cmd"));
+  // RCCHECK(rclc_subscription_init_default(
+  //   &motor_d_sub,
+  //   &node,
+  //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+  //   "/wamv/thrusters/right_front_thrust_cmd"));
   //  RCCHECK(rclc_subscription_init_default(
   //    &motor_e_sub,
   //    &node,
   //    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
   //    "/wamv/thrusters/right_middle_thrust_cmd"));
+  // RCCHECK(rclc_subscription_init_default(
+  //   &motor_f_sub,
+  //   &node,
+  //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+  //   "/wamv/thrusters/right_rear_thrust_cmd"));
   RCCHECK(rclc_subscription_init_default(
-    &motor_f_sub,
+    &all_motors_sub,
     &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-    "/wamv/thrusters/right_rear_thrust_cmd"));
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+    "/thrusters/all_cmds"
+  ))
 
   // create executor
-  RCCHECK(rclc_executor_init(&executor, &support.context, 6, &allocator));  // Increment this for more subs
+  RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));  // Increment this for more subs
 
-  RCCHECK(rclc_executor_add_subscription(&executor, &motor_a_sub, &msg_a, &left_rear_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor, &motor_b_sub, &msg_b, &left_middle_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor, &motor_c_sub, &msg_c, &left_front_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor, &motor_d_sub, &msg_d, &right_front_callback, ON_NEW_DATA));
-  //  RCCHECK(rclc_executor_add_subscription(&executor, &motor_e_sub, &msg_e, &right_middle_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor, &motor_f_sub, &msg_f, &right_rear_callback, ON_NEW_DATA));
+  // RCCHECK(rclc_executor_add_subscription(&executor, &motor_a_sub, &msg_a, &left_rear_callback, ON_NEW_DATA));
+  // RCCHECK(rclc_executor_add_subscription(&executor, &motor_b_sub, &msg_b, &left_middle_callback, ON_NEW_DATA));
+  // RCCHECK(rclc_executor_add_subscription(&executor, &motor_c_sub, &msg_c, &left_front_callback, ON_NEW_DATA));
+  // RCCHECK(rclc_executor_add_subscription(&executor, &motor_d_sub, &msg_d, &right_front_callback, ON_NEW_DATA));
+  // //  RCCHECK(rclc_executor_add_subscription(&executor, &motor_e_sub, &msg_e, &right_middle_callback, ON_NEW_DATA));
+  // RCCHECK(rclc_executor_add_subscription(&executor, &motor_f_sub, &msg_f, &right_rear_callback, ON_NEW_DATA));
 
-  msg.data = 0;
-  msg_a.data = 0;
-  msg_b.data = 0;
-  msg_c.data = 0;
-  msg_d.data = 0;
-  msg_e.data = 0;
-  msg_f.data = 0;
+  RCCHECK(rclc_executor_add_subscription(&executor, &all_motors_sub, &all_msg, &all_motors_callback, ON_NEW_DATA));
+
+  // msg.data = 0;
+  // msg_a.data = 0;
+  // msg_b.data = 0;
+  // msg_c.data = 0;
+  // msg_d.data = 0;
+  // msg_e.data = 0;
+  // msg_f.data = 0;
+  all_msg.data.size = 0;
   return true;
 }
 

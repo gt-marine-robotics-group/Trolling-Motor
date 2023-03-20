@@ -1,0 +1,5 @@
+{
+    "sketch": "firmware/firmware.ino",
+    "board": "arduino:sam:arduino_due_x_dbg",
+    "port": "/dev/ttyACM0"
+}
