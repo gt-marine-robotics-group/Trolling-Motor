@@ -533,13 +533,13 @@ int throttleToESC(int throttle) {
 
 void exec_mode(int mode, bool killed) {
   // Vehicle Logic
+  ros_handler();
   if (killed) {
     // TODO: Listen for killed on actual E-stop circuit in case of manual shutoff
     // TODO: Add a time delay before resuming from killed state with blink
     cfg_lt(1, 0, 0, 0);
   } else {
     if (mode == 0) {  // AUTONOMOUS
-      ros_handler();
       motor_a.writeMicroseconds(throttleToESC(ros_cmd_a));
       motor_b.writeMicroseconds(throttleToESC(ros_cmd_b));
       motor_c.writeMicroseconds(throttleToESC(ros_cmd_c));
