@@ -1,3 +1,5 @@
+#include <micro_ros_arduino.h>
+
 #include "micro_ros.h"
 #include "light_tower.h"
 #include "motors.h"
@@ -77,11 +79,15 @@ bool MicroRos::create_entities() {
   m_allocator = rcl_get_default_allocator();
 
   //create init_options
-  RCCHECK(rclc_support_init(&m_support, 0, NULL, &m_allocator));
-  
+  // RCCHECK(rclc_support_init(&m_support, 0, NULL, &m_allocator));
+  rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
+
   // create node
-  rcl_node_options_t node_ops = rcl_node_get_default_options();
-  node_ops.domain_id = (size_t)(12);
+  // rcl_node_options_t node_ops = rcl_node_get_default_options();
+  // node_ops.domain_id = (size_t)(12);
+  size_t domain_id = (size_t) 12;
+
+	rcl_init_options_set_domain_id(&init_options, domain_id);
 
   RCCHECK(rclc_subscription_init_default(
     &m_motor_sub,
