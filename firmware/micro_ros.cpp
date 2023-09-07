@@ -1,5 +1,3 @@
-#include <micro_ros_arduino.h>
-
 #include "micro_ros.h"
 #include "light_tower.h"
 #include "motors.h"
@@ -88,6 +86,9 @@ bool MicroRos::create_entities() {
   size_t domain_id = (size_t) 12;
 
 	rcl_init_options_set_domain_id(&init_options, domain_id);
+
+  const char * node_name = "micro_ros_arduino_node";
+  RCCHECK(rclc_node_init_default(&m_node, node_name, "", &m_support));
 
   RCCHECK(rclc_subscription_init_default(
     &m_motor_sub,
