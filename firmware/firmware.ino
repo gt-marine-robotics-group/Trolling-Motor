@@ -458,12 +458,13 @@ bool ros_create_entities() {
   delay(1000);
   allocator = rcl_get_default_allocator();
   //create init_options
-  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+  rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
   // create node
-  rcl_node_options_t node_ops = rcl_node_get_default_options();
-  node_ops.domain_id = (size_t)(12);
-  RCCHECK(rclc_node_init_with_options(&node, "micro_ros_arduino_node", "", &support, &node_ops));
-
+  size_t domain_id = (size_t) 12;
+  rcl_init_options_set_domain_id(&init_options, domain_id);
+  // RCCHECK(rclc_node_init_with_options(&node, "micro_ros_arduino_node", "", &support, &node_ops));
+  RCCHECK(rclc_support_init_with_options(&support, 0, NULL, &init_options, &allocator));
+  RCCHECK(rclc_node_init_default(&node, "micro_ros_arduino_node", "", &support));
   // create thrust subscribers
   // RCCHECK(rclc_subscription_init_default(
   //   &motor_a_sub,
