@@ -623,21 +623,21 @@ void setup() {
   int calibration_zero_check = 0;
   center_rc();
 
-  // while (not mode_ready or not calibration_ready or calibration_zero_check < 15) {
-  //   loop_time = millis();
-  //   run_lt(2, 2, 0, 0);
-  //   //set_lt(1, 1, 1, 1);
-  //   read_rc();
-  //   if (cmd_ctr == 1) {
-  //     mode_ready = true;
-  //   }
-  //   calibration_ready = calibrate_rc();
-  //   if (abs(cmd_srg) + abs(cmd_swy) + abs(cmd_yaw) <= 4) {
-  //     calibration_zero_check += 1;
-  //   } else {
-  //     calibration_zero_check = 0;
-  //   }
-  // }
+  while (not mode_ready or not calibration_ready or calibration_zero_check < 15) {
+    loop_time = millis();
+    run_lt(2, 2, 0, 0);
+    //set_lt(1, 1, 1, 1);
+    read_rc();
+    if (cmd_ctr == 1) {
+      mode_ready = true;
+    }
+    calibration_ready = calibrate_rc();
+    if (abs(cmd_srg) + abs(cmd_swy) + abs(cmd_yaw) <= 4) {
+      calibration_zero_check += 1;
+    } else {
+      calibration_zero_check = 0;
+    }
+  }
   Serial.println("============= CALIBRATION COMPLETE ===============");
 
   Serial.println("INITIALIZING MOTORS...");
