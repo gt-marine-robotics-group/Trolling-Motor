@@ -12,6 +12,8 @@
 #include <std_msgs/msg/int32.h>
 #include <std_msgs/msg/float32.h>
 #include <std_msgs/msg/float32_multi_array.h>
+
+#define LED_PIN 13
 /*
   GITMRG Nova V1.1 Custom BLDC Thruster Driver
 
@@ -458,12 +460,19 @@ bool ros_create_entities() {
   delay(1000);
   allocator = rcl_get_default_allocator();
   //create init_options
-  rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
+  // rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
   // create node
-  size_t domain_id = (size_t) 12;
-  rcl_init_options_set_domain_id(&init_options, domain_id);
-  // RCCHECK(rclc_node_init_with_options(&node, "micro_ros_arduino_node", "", &support, &node_ops));
+  // size_t domain_id = (size_t) 12;
+  // rcl_init_options_set_domain_id(&init_options, domain_id);
+  // // RCCHECK(rclc_node_init_with_options(&node, "micro_ros_arduino_node", "", &support, &node_ops));
+  // RCCHECK(rclc_support_init_with_options(&support, 0, NULL, &init_options, &allocator));
+  rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
+  RCCHECK(rcl_init_options_init(&init_options, allocator));
+  RCCHECK(rcl_init_options_set_domain_id(&init_options, 12));
+
   RCCHECK(rclc_support_init_with_options(&support, 0, NULL, &init_options, &allocator));
+  
+  // RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
   RCCHECK(rclc_node_init_default(&node, "micro_ros_arduino_node", "", &support));
   // create thrust subscribers
   // RCCHECK(rclc_subscription_init_default(
@@ -596,6 +605,9 @@ void setup() {
   Serial.begin(9600);
   loop_time = millis();
 
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);  
+
   delay(100);
   Serial.println("NOVA MOTOR STARTING...");
   Serial.println("SETTING UP AND TESTING LIGHT TOWER...");
@@ -610,21 +622,22 @@ void setup() {
   bool calibration_ready = false;
   int calibration_zero_check = 0;
   center_rc();
-  while (not mode_ready or not calibration_ready or calibration_zero_check < 15) {
-    loop_time = millis();
-    run_lt(2, 2, 0, 0);
-    //set_lt(1, 1, 1, 1);
-    read_rc();
-    if (cmd_ctr == 1) {
-      mode_ready = true;
-    }
-    calibration_ready = calibrate_rc();
-    if (abs(cmd_srg) + abs(cmd_swy) + abs(cmd_yaw) <= 4) {
-      calibration_zero_check += 1;
-    } else {
-      calibration_zero_check = 0;
-    }
-  }
+
+  // while (not mode_ready or not calibration_ready or calibration_zero_check < 15) {
+  //   loop_time = millis();
+  //   run_lt(2, 2, 0, 0);
+  //   //set_lt(1, 1, 1, 1);
+  //   read_rc();
+  //   if (cmd_ctr == 1) {
+  //     mode_ready = true;
+  //   }
+  //   calibration_ready = calibrate_rc();
+  //   if (abs(cmd_srg) + abs(cmd_swy) + abs(cmd_yaw) <= 4) {
+  //     calibration_zero_check += 1;
+  //   } else {
+  //     calibration_zero_check = 0;
+  //   }
+  // }
   Serial.println("============= CALIBRATION COMPLETE ===============");
 
   Serial.println("INITIALIZING MOTORS...");
@@ -678,6 +691,7 @@ void ros_handler() {
       zero_ros_cmds();
       zero_all_motors();
       EXECUTE_EVERY_N_MS(200, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 2)) ? AGENT_AVAILABLE : WAITING_AGENT;);
+      digitalWrite(LED_PIN, HIGH);  
       break;
     case AGENT_AVAILABLE:
       cfg_lt(0, 0, 2, 0);
@@ -689,10 +703,12 @@ void ros_handler() {
       if (state == WAITING_AGENT) {
         ros_destroy_entities();
       };
+      digitalWrite(LED_PIN, LOW);
       break;
     case AGENT_CONNECTED:
       cfg_lt(0, 0, 1, 0);
       EXECUTE_EVERY_N_MS(1000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 4)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
+      digitalWrite(LED_PIN, LOW);  
       break;
     case AGENT_DISCONNECTED:
       set_lt(1, 0, 1, 0);    
@@ -701,6 +717,7 @@ void ros_handler() {
       ros_destroy_entities();
       delay(100);
       state = WAITING_AGENT;
+      digitalWrite(LED_PIN, LOW);
       break;
     default:
       break;
