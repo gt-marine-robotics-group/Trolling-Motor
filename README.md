@@ -1,15 +1,12 @@
-# Nova Motor Driver board
-GITMRG Custom Trolling Motor Control System
+# Nova Motor Control Interface
 
-Can be used with any off-the-shelf trolling motor.
+micro-ROS motor control interface
 
-Based on NV-series trolling motor with added PWM module
+## Use Case
+Systems that do not require fully reliable real-time control (such as multirotors) but need to interface with hardware such as motors.
 
+## Installation
 
-Hardware:
-- Arduino Due
-- 2.50mm JST-XH Connectors
-- [Ribbon cables](https://www.amazon.com/Antrader-1-27mm-Ribbon-2-54mm-Connectors/dp/B07PBGKQ3G/ref=sr_1_3?keywords=26%2Bawg%2Bribbon&qid=1650318362&sr=8-3&th=1)
-- 3-8 Mux/Demux HD74HC4051
-- Digital Potentiometer 100K X9C104S
-- 
+1. Install Arduino
+2. Install Teensyduino 1.57.x (later versions will not work with micro-ROS Humble)
+3. Install micro-ros-arduino Humble release
