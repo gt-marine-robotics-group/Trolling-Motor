@@ -112,22 +112,22 @@ const uint8_t ORX_THRO_PIN = 6;
 // B - Port Center    E - Starboard Center
 // A - Port Aft       F - Starboard Aft
 // MOTOR ALFA
-const int A_SIG_PIN = 36;
+const int A_SIG_PIN = 33; // 36 -> 33
 Servo motor_a;
 // MOTOR BRAVO
-const int B_SIG_PIN = 37;
+const int B_SIG_PIN = 37; // 37
 Servo motor_b;
 // MOTOR CHARLIE
-const int C_SIG_PIN = 38;
+const int C_SIG_PIN = 35; // 38 -> 35
 Servo motor_c;
 // MOTOR DELTA
-const int D_SIG_PIN = 35;
+const int D_SIG_PIN = 38; // 35 -> 38
 Servo motor_d;
 // MOTOR ECHO
-const int E_SIG_PIN = 34;
+const int E_SIG_PIN = 34; // 34 
 Servo motor_e;
 // MOTOR FOXTROT
-const int F_SIG_PIN = 33;
+const int F_SIG_PIN = 36; // 33 -> 36
 Servo motor_f;
 
 
@@ -532,14 +532,16 @@ int throttleToESC(int throttle) {
 }
 
 void exec_mode(int mode, bool killed) {
+  // create participant, delete client, destroy session, create client, establish session, establish session, establish session, establish session
+  // destroy entities, connected, waiting
   // Vehicle Logic
-  ros_handler();
   if (killed) {
     // TODO: Listen for killed on actual E-stop circuit in case of manual shutoff
     // TODO: Add a time delay before resuming from killed state with blink
     cfg_lt(1, 0, 0, 0);
   } else {
     if (mode == 0) {  // AUTONOMOUS
+      ros_handler();
       motor_a.writeMicroseconds(throttleToESC(ros_cmd_a));
       motor_b.writeMicroseconds(throttleToESC(ros_cmd_b));
       motor_c.writeMicroseconds(throttleToESC(ros_cmd_c));
@@ -651,7 +653,7 @@ void ros_handler() {
       cfg_lt(3, 0, 3, 0);
       zero_ros_cmds();
       zero_all_motors();
-      EXECUTE_EVERY_N_MS(200, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 2)) ? AGENT_AVAILABLE : WAITING_AGENT;);
+      EXECUTE_EVERY_N_MS(1500, state = (RMW_RET_OK == rmw_uros_ping_agent(500, 2)) ? AGENT_AVAILABLE : WAITING_AGENT;);
       break;
     case AGENT_AVAILABLE:
       cfg_lt(0, 0, 2, 0);
@@ -666,7 +668,7 @@ void ros_handler() {
       break;
     case AGENT_CONNECTED:
       cfg_lt(0, 0, 1, 0);
-      EXECUTE_EVERY_N_MS(1000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 4)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
+      EXECUTE_EVERY_N_MS(7500, state = (RMW_RET_OK == rmw_uros_ping_agent(1500, 5)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
       break;
     case AGENT_DISCONNECTED:
       set_lt(1, 0, 1, 0);    
