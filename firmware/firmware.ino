@@ -1,5 +1,6 @@
 // #include <LapX9C10X.h>
 #include <ServoInput.h>
+#include <MS5837.h>
 #include <Servo.h>
 
 #include <micro_ros_arduino.h>
@@ -136,6 +137,8 @@ Servo motor_g;
 
 const int H_SIG_PIN = 41; // FRONT RIGHT HORIZ
 Servo motor_h;
+
+MS5837 depth_sensor;
 
 
 // LIGHT TOWER
@@ -327,9 +330,11 @@ int led = 13;
 //rcl_subscription_t subscriber;
 
 rcl_subscription_t motors_sub;
+rcl_publisher_t depth_pub;
 
 rclc_executor_t executor;
 std_msgs__msg__Float32MultiArray msg_in;
+std_msgs__msg__Float32 msg_depth;
 
 rcl_allocator_t allocator;
 rclc_support_t support;
@@ -351,9 +356,23 @@ void motors_callback(std_msgs__msg__Float32MultiArray * msg) {
   digitalWrite(led, LOW);
 }
 
+void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
+{  
+  // Serial.println("start");
+  RCLC_UNUSED(last_call_time);
+  if (timer != NULL) {
+    RCSOFTCHECK(rcl_publish(&depth_pub, &msg_depth, NULL));
+    msg_depth.data = depth_sensor.depth();
+    // digitalWrite(led, !digitalRead(led));
+  }
+  // digitalWrite(led, !digitalRead(led));
+  // Serial.println("Timer callback");
+}
+
 bool ros_create_entities() {
   // Initialize micro-ROS allocator
   delay(1000);
+  Wire2.begin();
   allocator = rcl_get_default_allocator();
 
   
@@ -398,10 +417,33 @@ bool ros_create_entities() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
     "/thrust_cmds"));
 
+  RCCHECK(rclc_publisher_init_default(
+    &depth_pub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+    "/depth_sensor"));
+
+  const unsigned int timer_timeout = 100;
+  RCCHECK(rclc_timer_init_default(
+    &timer,
+    &support,
+    RCL_MS_TO_NS(timer_timeout),
+    timer_callback));
+
   // create executor
-  RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));  // Increment this for more subs
+  RCCHECK(rclc_executor_init(&executor, &support.context, 2, &allocator));  // Increment this for more subs
 
   RCCHECK(rclc_executor_add_subscription(&executor, &motors_sub, &msg_in, &motors_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_timer(&executor, &timer));
+
+  while (!depth_sensor.init(Wire2)) {
+    digitalWrite(led, !digitalRead(led));
+    delay(2000);
+  }
+
+  depth_sensor.setModel(MS5837::MS5837_30BA);
+  depth_sensor.setFluidDensity(997); // kg/m^3 (freshwater, 1029 for seawater)
+  msg_depth.data = 0.0;
 
   return true;
 }
@@ -411,6 +453,7 @@ void ros_destroy_entities() {
   (void)rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
 
   rcl_subscription_fini(&motors_sub, &node);
+  rcl_publisher_fini(&depth_pub, &node);
   rclc_executor_fini(&executor);
   rcl_node_fini(&node);
   rclc_support_fini(&support);
@@ -473,16 +516,16 @@ void exec_mode(int mode, bool killed) {
 }
 
 void setup() {
-  Serial.begin(9600);
+  // Serial.begin(9600);
   loop_time = millis();
 
   delay(100);
-  Serial.println("NOVA MOTOR STARTING...");
-  Serial.println("SETTING UP AND TESTING LIGHT TOWER...");
+  // Serial.println("NOVA MOTOR STARTING...");
+  // Serial.println("SETTING UP AND TESTING LIGHT TOWER...");
 
-  Serial.println(sizeof(float_t));
+  // Serial.println(sizeof(float_t));
 
-  Serial.println("INITIALIZING MOTORS...");
+  // Serial.println("INITIALIZING MOTORS...");
   motor_a.attach(A_SIG_PIN);
   motor_b.attach(B_SIG_PIN);
   motor_c.attach(C_SIG_PIN);
@@ -502,14 +545,14 @@ void setup() {
   motor_h.writeMicroseconds(1500);
   delay(2500);
 
-  Serial.println("SETTING UP MICROROS TRANSPORTS...");
+  // Serial.println("SETTING UP MICROROS TRANSPORTS...");
   set_microros_transports();
 
   state = WAITING_AGENT;
 
-  Serial.println("==================================================");
-  Serial.println("============ NOVA MOTOR INIT COMPLETE ============");
-  Serial.println("==================================================");
+  // Serial.println("==================================================");
+  // Serial.println("============ NOVA MOTOR INIT COMPLETE ============");
+  // Serial.println("==================================================");
   pinMode(led, OUTPUT);
 }
 
@@ -575,6 +618,9 @@ int cmd_ctr = 0;
 void loop() {
   // Get loop time
   loop_time = millis();
+
+  depth_sensor.read();
+  
   // E-Stop
   //  read_estop();
   // Polling R/C commands
