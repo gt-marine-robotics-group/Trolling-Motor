@@ -159,6 +159,7 @@ MS5837 depth_sensor;
 const int throttleMax = 100;
 int m_signal = 0;
 bool debug = true;
+bool depth_sensor_init = false;
 int control_state = 1;  // 0 - KILLED | 1 - STANDBY | 2 - MANUAL | 3 - AUTONOMOUS | 4 - AUXILIARY
 // add a blinking delay for restoring power after kill state
 unsigned long loop_time = 0;
@@ -362,7 +363,17 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
   RCLC_UNUSED(last_call_time);
   if (timer != NULL) {
     RCSOFTCHECK(rcl_publish(&depth_pub, &msg_depth, NULL));
-    msg_depth.data = depth_sensor.depth();
+    if (depth_sensor_init == true) {
+      msg_depth.data = depth_sensor.depth();
+    } else {
+      msg_depth.data = -1.0;
+      if (depth_sensor.init(Wire2)) {
+        depth_sensor_init = true;
+        init_depth_sensor();
+        depth_sensor.read();
+        msg_depth.data = depth_sensor.depth();
+      }
+    }
     // digitalWrite(led, !digitalRead(led));
   }
   // digitalWrite(led, !digitalRead(led));
@@ -436,16 +447,28 @@ bool ros_create_entities() {
   RCCHECK(rclc_executor_add_subscription(&executor, &motors_sub, &msg_in, &motors_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_timer(&executor, &timer));
 
-  while (!depth_sensor.init(Wire2)) {
+  if (!depth_sensor.init(Wire2)) {
     digitalWrite(led, !digitalRead(led));
-    delay(2000);
+    depth_sensor_init = false;
+    msg_depth.data = -1.0;
   }
 
+  // while (!depth_sensor.init(Wire2)) {
+  //   digitalWrite(led, !digitalRead(led));
+  //   delay(2000);
+  // }
+  
+  if (depth_sensor_init == true) {
+    init_depth_sensor();
+  }
+
+  return true;
+}
+
+void init_depth_sensor() {
   depth_sensor.setModel(MS5837::MS5837_30BA);
   depth_sensor.setFluidDensity(997); // kg/m^3 (freshwater, 1029 for seawater)
   msg_depth.data = 0.0;
-
-  return true;
 }
 
 void ros_destroy_entities() {
@@ -619,7 +642,15 @@ void loop() {
   // Get loop time
   loop_time = millis();
 
-  depth_sensor.read();
+  if (depth_sensor_init == true) {
+    depth_sensor.read();
+  } else {
+    if (depth_sensor.init(Wire2)) {
+      depth_sensor_init = true;
+      init_depth_sensor();
+      depth_sensor.read();
+    }
+  }
   
   // E-Stop
   //  read_estop();
