@@ -157,6 +157,7 @@ MS5837 depth_sensor;
 
 // VARS -------------------------------------------------------------
 const int throttleMax = 100;
+const int throttleMin = 5;
 int m_signal = 0;
 bool debug = true;
 bool depth_sensor_init = false;
@@ -164,6 +165,9 @@ int control_state = 1;  // 0 - KILLED | 1 - STANDBY | 2 - MANUAL | 3 - AUTONOMOU
 // add a blinking delay for restoring power after kill state
 unsigned long loop_time = 0;
 unsigned long last_time = 0;
+
+unsigned long last_motorcmd_recv = 0;
+float last_thrust_cmds[9] = {0};
 
 // DEVICES ----------------------------------------------------------
 // MOTORS
@@ -334,7 +338,7 @@ rcl_subscription_t motors_sub;
 rcl_publisher_t depth_pub;
 
 rclc_executor_t executor;
-std_msgs__msg__Float32MultiArray msg_in;
+std_msgs__msg__Float32MultiArray motors_msg_in;
 std_msgs__msg__Float32 msg_depth;
 
 rcl_allocator_t allocator;
@@ -344,27 +348,43 @@ rcl_timer_t timer;
 
 void motors_callback(std_msgs__msg__Float32MultiArray * msg) {
   // const std_msgs__msg__Float32MultiArray *msg = (const std_msgs__msg__Float32MultiArray *)msgin;
+  if (msg == NULL) {
+    if ((loop_time - last_motorcmd_recv) > 500) {
+      for (int i = 0; i < 8; i++) {
+        last_thrust_cmds[i] = 0;
+      }
+    }
+  } else {
+    last_motorcmd_recv = loop_time;
+    for (int i = 0; i < 8; i++) {
+      last_thrust_cmds[i] = msg->data.data[i] * 100;
+    }
+  }
   digitalWrite(led, HIGH);
-  ros_cmd_a = msg->data.data[0] * 100;
-  ros_cmd_b = msg->data.data[1] * 100;
-  ros_cmd_c = msg->data.data[2] * 100;
-  ros_cmd_d = msg->data.data[3] * 100;
-  ros_cmd_e = msg->data.data[4] * 100;
-  ros_cmd_f = msg->data.data[5] * 100;
-  ros_cmd_g = msg->data.data[6] * 100;
-  ros_cmd_h = msg->data.data[7] * 100;
+  ros_cmd_a = last_thrust_cmds[0];
+  ros_cmd_b = last_thrust_cmds[1];
+  ros_cmd_c = last_thrust_cmds[2];
+  ros_cmd_d = last_thrust_cmds[3];
+  ros_cmd_e = last_thrust_cmds[4];
+  ros_cmd_f = last_thrust_cmds[5];
+  ros_cmd_g = last_thrust_cmds[6];
+  ros_cmd_h = last_thrust_cmds[7];
   delay(20);
   digitalWrite(led, LOW);
 }
 
-void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
+void depth_callback(rcl_timer_t * timer, int64_t last_call_time)
 {  
-  // Serial.println("start");
   RCLC_UNUSED(last_call_time);
   if (timer != NULL) {
     RCSOFTCHECK(rcl_publish(&depth_pub, &msg_depth, NULL));
     if (depth_sensor_init == true) {
-      msg_depth.data = depth_sensor.depth();
+      if (depth_sensor.depth() == -346263.78125) {
+        depth_sensor_init = false;
+        msg_depth.data = -2.0;
+      } else {
+        msg_depth.data = depth_sensor.depth();
+      }
     } else {
       msg_depth.data = -1.0;
       if (depth_sensor.init(Wire2)) {
@@ -388,19 +408,19 @@ bool ros_create_entities() {
 
   
   
-  msg_in.data.capacity = 8; 
-  msg_in.data.size = 0;
-  msg_in.data.data = (float_t*) malloc(msg_in.data.capacity * sizeof(float_t));
+  motors_msg_in.data.capacity = 8; 
+  motors_msg_in.data.size = 0;
+  motors_msg_in.data.data = (float_t*) malloc(motors_msg_in.data.capacity * sizeof(float_t));
   
 
-  msg_in.layout.dim.capacity = 8;
-  msg_in.layout.dim.size = 0;
-  msg_in.layout.dim.data = (std_msgs__msg__MultiArrayDimension*) malloc(msg_in.layout.dim.capacity * sizeof(std_msgs__msg__MultiArrayDimension));
+  motors_msg_in.layout.dim.capacity = 8;
+  motors_msg_in.layout.dim.size = 0;
+  motors_msg_in.layout.dim.data = (std_msgs__msg__MultiArrayDimension*) malloc(motors_msg_in.layout.dim.capacity * sizeof(std_msgs__msg__MultiArrayDimension));
 
-  for(size_t i = 0; i < msg_in.layout.dim.capacity; i++){
-      msg_in.layout.dim.data[i].label.capacity = 8;
-      msg_in.layout.dim.data[i].label.size = 0;
-      msg_in.layout.dim.data[i].label.data = (char*) malloc(msg_in.layout.dim.data[i].label.capacity * sizeof(char));
+  for(size_t i = 0; i < motors_msg_in.layout.dim.capacity; i++){
+      motors_msg_in.layout.dim.data[i].label.capacity = 8;
+      motors_msg_in.layout.dim.data[i].label.size = 0;
+      motors_msg_in.layout.dim.data[i].label.data = (char*) malloc(motors_msg_in.layout.dim.data[i].label.capacity * sizeof(char));
   }
 
 
@@ -439,12 +459,12 @@ bool ros_create_entities() {
     &timer,
     &support,
     RCL_MS_TO_NS(timer_timeout),
-    timer_callback));
+    depth_callback));
 
   // create executor
   RCCHECK(rclc_executor_init(&executor, &support.context, 2, &allocator));  // Increment this for more subs
 
-  RCCHECK(rclc_executor_add_subscription(&executor, &motors_sub, &msg_in, &motors_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &motors_sub, &motors_msg_in, &motors_callback, ALWAYS));
   RCCHECK(rclc_executor_add_timer(&executor, &timer));
 
   if (!depth_sensor.init(Wire2)) {
@@ -461,6 +481,9 @@ bool ros_create_entities() {
   if (depth_sensor_init == true) {
     init_depth_sensor();
   }
+
+  const int sync_timeout = 100;
+  rmw_uros_sync_session(sync_timeout);
 
   return true;
 }
@@ -483,10 +506,13 @@ void ros_destroy_entities() {
 }
 
 int maxF(int throttle) {
-  if (throttle < -100) {
-    throttle = -100;
-  } else if (throttle > 100) {
-    throttle = 100;
+  if (throttle < -throttleMax) {
+    throttle = -throttleMax;
+  } else if (throttle > throttleMax) {
+    throttle = throttleMax;
+  }
+  if (throttle > -throttleMin && throttle < throttleMin) {
+    throttle = 0;
   }
   return throttle;
 }
