@@ -351,6 +351,7 @@ std_msgs__msg__Bool e_stop_active;
 rcl_allocator_t allocator;
 rclc_support_t support;
 rcl_node_t node;
+rcl_timer_t timer0;
 rcl_timer_t timer;
 
 void motors_callback(std_msgs__msg__Float32MultiArray * msg) {
@@ -515,7 +516,7 @@ bool ros_create_entities() {
 
   const unsigned int depth_timeout = 100;
   RCCHECK(rclc_timer_init_default(
-    &timer,
+    &timer0,
     &support,
     RCL_MS_TO_NS(depth_timeout),
     depth_callback));
@@ -528,11 +529,12 @@ bool ros_create_entities() {
     debug_callback));
 
   // create executor
-  RCCHECK(rclc_executor_init(&executor, &support.context, 4, &allocator));  // Increment this for more subs
+  RCCHECK(rclc_executor_init(&executor, &support.context, 5, &allocator));  // Increment this for more subs
 
   RCCHECK(rclc_executor_add_subscription(&executor, &motors_sub, &motors_msg_in, &motors_callback, ALWAYS));
   RCCHECK(rclc_executor_add_subscription(&executor, &estop_sub, &e_stop_active, &estop_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_timer(&executor, &timer));
+  RCCHECK(rclc_executor_add_timer(&executor, &timer0));
 
   if (!depth_sensor.init(Wire2)) {
     digitalWrite(led, !digitalRead(led));
