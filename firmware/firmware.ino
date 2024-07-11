@@ -1,4 +1,6 @@
 // #include <LapX9C10X.h>
+#include <MCP_POT.h>
+
 #include <ServoInput.h>
 #include <Servo.h>
 
